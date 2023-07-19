@@ -4,7 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b5f2feb7-edb4-452b-a54a-cbee07219c7a" name="変更" comment="" />
+    <list default="true" id="b5f2feb7-edb4-452b-a54a-cbee07219c7a" name="変更" comment="2023.07.19">
+      <change afterPath="$PROJECT_DIR$/../SwordofMagic10/src/main/java/SwordofMagic10/Player/Gathering/Fishing.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../SwordofMagic10/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../SwordofMagic10/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../SwordofMagic10/src/main/java/SwordofMagic10/Player/Gathering/Collect.java" beforeDir="false" afterPath="$PROJECT_DIR$/../SwordofMagic10/src/main/java/SwordofMagic10/Player/Gathering/Collect.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../SwordofMagic10/src/main/java/SwordofMagic10/Player/Gathering/Lumber.java" beforeDir="false" afterPath="$PROJECT_DIR$/../SwordofMagic10/src/main/java/SwordofMagic10/Player/Gathering/Lumber.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../SwordofMagic10/src/main/java/SwordofMagic10/Player/Gathering/Mining.java" beforeDir="false" afterPath="$PROJECT_DIR$/../SwordofMagic10/src/main/java/SwordofMagic10/Player/Gathering/Mining.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -19,30 +25,37 @@
       </list>
     </option>
   </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../SwordofMagic10" />
+  </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
   <component name="ProjectId" id="2Noty2LWaA5uM5T0KCDiYkG67fi" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Downloaded.Files.Path.Enabled": "false",
-    "Repository.Attach.Annotations": "false",
-    "Repository.Attach.JavaDocs": "false",
-    "Repository.Attach.Sources": "false",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "ignore.virus.scanning.warn.message": "true",
-    "last_opened_file_path": "E:/IntelliJ IDEA/Projects/SomNetworkVelocity",
-    "project.structure.last.edited": "モジュール",
-    "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.20574713",
-    "settings.editor.selected.configurable": "vcs.Git"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Downloaded.Files.Path.Enabled&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.Annotations&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.JavaDocs&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.Sources&quot;: &quot;false&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;E:/IntelliJ IDEA/Projects/SwordofMagic10&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;モジュール&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.20574713&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;reference.settings.ide.settings.new.ui&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="E:\IntelliJ IDEA\Projects\SwordofMagic10\src\main\java\SwordofMagic10\DataBase" />
@@ -96,6 +109,15 @@
       <option name="presentableId" value="Default" />
       <updated>1680342515546</updated>
     </task>
+    <task id="LOCAL-00001" summary="2023.07.19">
+      <option name="closed" value="true" />
+      <created>1689768550626</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1689768550626</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="UnknownFeatures">
@@ -103,6 +125,10 @@
     <option featureType="dependencySupport" implementationName="java:net.kyori:adventure-api" />
     <option featureType="dependencySupport" implementationName="java:org.spigotmc:spigot-api" />
     <option featureType="dependencySupport" implementationName="java:io.papermc.paper:paper-api" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="2023.07.19" />
+    <option name="LAST_COMMIT_MESSAGE" value="2023.07.19" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

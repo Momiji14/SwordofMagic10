@@ -34,7 +34,7 @@ public class Lumber {
         put(OAK_WOOD, wood);
         put(JUNGLE_LOG, wood);
         put(JUNGLE_WOOD, wood);
-        values().forEach(list -> list.add(new GatheringTable(ItemDataLoader.getItemData("精錬石"), 0.02)));
+        values().forEach(list -> list.add(new GatheringTable(ItemDataLoader.getItemData("精錬石"), 0.05)));
     }};
 
     private final PlayerData playerData;

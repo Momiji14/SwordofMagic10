@@ -66,7 +66,7 @@ public class Collect {
         put(GRASS, grass);
         put(TALL_GRASS, grass);
 
-        values().forEach(list -> list.add(new GatheringTable(ItemDataLoader.getItemData("精錬石"), 0.01)));
+        values().forEach(list -> list.add(new GatheringTable(ItemDataLoader.getItemData("精錬石"), 0.02)));
     }};
 
     private final PlayerData playerData;

@@ -31,14 +31,22 @@ public class Mining {
         coal.add(new GatheringTable(ItemDataLoader.getItemData("ダイヤモンド"), 0.01));
         put(COAL_ORE, coal);
 
+        List<GatheringTable> copper = new ArrayList<>();
+        copper.add(new GatheringTable(ItemDataLoader.getItemData("石材"), 0.5));
+        copper.add(new GatheringTable(ItemDataLoader.getItemData("銅鉱石"), 0.5));
+        put(COPPER_ORE, copper);
+        
         List<GatheringTable> iron = new ArrayList<>();
         iron.add(new GatheringTable(ItemDataLoader.getItemData("石材"), 0.5));
-        iron.add(new GatheringTable(ItemDataLoader.getItemData("鉄鉱石"), 0.35));
-        iron.add(new GatheringTable(ItemDataLoader.getItemData("銅鉱石"), 0.35));
-        iron.add(new GatheringTable(ItemDataLoader.getItemData("金鉱石"), 0.05));
+        iron.add(new GatheringTable(ItemDataLoader.getItemData("鉄鉱石"), 0.5));
         put(IRON_ORE, iron);
 
-        values().forEach(list -> list.add(new GatheringTable(ItemDataLoader.getItemData("精錬石"), 0.02)));
+        List<GatheringTable> gold = new ArrayList<>();
+        gold.add(new GatheringTable(ItemDataLoader.getItemData("石材"), 0.5));
+        gold.add(new GatheringTable(ItemDataLoader.getItemData("金鉱石"), 0.5));
+        put(GOLD_ORE, gold);
+
+        values().forEach(list -> list.add(new GatheringTable(ItemDataLoader.getItemData("精錬石"), 0.05)));
     }};
 
     private final PlayerData playerData;
