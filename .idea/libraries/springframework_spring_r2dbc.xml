@@ -1,0 +1,17 @@
+<component name="libraryTable">
+  <library name="springframework.spring.r2dbc" type="repository">
+    <properties maven-id="org.springframework:spring-r2dbc:6.0.7" />
+    <CLASSES>
+      <root url="jar://$MAVEN_REPOSITORY$/org/springframework/spring-r2dbc/6.0.7/spring-r2dbc-6.0.7.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/springframework/spring-beans/6.0.7/spring-beans-6.0.7.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/springframework/spring-core/6.0.7/spring-core-6.0.7.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/springframework/spring-jcl/6.0.7/spring-jcl-6.0.7.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/springframework/spring-tx/6.0.7/spring-tx-6.0.7.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/io/r2dbc/r2dbc-spi/1.0.0.RELEASE/r2dbc-spi-1.0.0.RELEASE.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/org/reactivestreams/reactive-streams/1.0.3/reactive-streams-1.0.3.jar!/" />
+      <root url="jar://$MAVEN_REPOSITORY$/io/projectreactor/reactor-core/3.5.4/reactor-core-3.5.4.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

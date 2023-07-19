@@ -1,0 +1,92 @@
+name: SwordofMagic10
+version: '${project.version}'
+main: SwordofMagic10.SomCore
+api-version: 1.19
+folia-supported: true
+depend:
+  - LibsDisguises
+  - ProtocolLib
+
+commands:
+  Test:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  SomReload:
+    permission: som10.reload
+    description: description
+    usage: /<command>
+  Save:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  Load:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  MobClear:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  MobSpawn:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  PlayMode:
+    aliases: pm
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  GetItem:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  SetLevel:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  BossBarMessage:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  DisplayParticle:
+    aliases: dp
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  Heal:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+
+  Menu:
+    aliases: m
+    description: description
+    usage: /<command>
+  Party:
+    aliases: pt
+    description: description
+    usage: /<command>
+  SkipDeath:
+    aliases: sd
+    description: description
+    usage: /<command>
+  PlayerRide:
+    aliases: pr
+    description: description
+    usage: /<command>
+  ParticleDensity:
+    aliases: pd
+    description: description
+    usage: /<command>
+  Death:
+    description: description
+    usage: /<command>
+  TalkSpeed:
+    aliases: ts
+    description: description
+    usage: /<command>
+  Help:
+    aliases: h
+    description: description
+    usage: /<command>
