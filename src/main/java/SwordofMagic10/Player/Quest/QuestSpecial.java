@@ -6,11 +6,25 @@ import SwordofMagic10.Item.SomEquipment;
 import SwordofMagic10.Item.SomItemStack;
 import SwordofMagic10.Player.PlayerData;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static SwordofMagic10.Component.Function.decoText;
+
 public class QuestSpecial extends QuestPhase {
 
     private SpecialID specialID;
     public QuestSpecial(QuestData questData) {
         super(questData);
+    }
+
+    @Override
+    public List<String> sidebarLine(PlayerData playerData) {
+        List<String> list = new ArrayList<>();
+        for (String lore : getLore()) {
+            list.add("§7・§a" + lore);
+        }
+        return list;
     }
 
     public SpecialID getSpecialID() {
@@ -43,6 +57,7 @@ public class QuestSpecial extends QuestPhase {
                 }
             }
             case Tutorial_Upgrade -> {
+                if (!playerData.getEquipment().isEmpty()) return true;
                 for (SomItemStack stack : playerData.getItemInventory().getInventory()) {
                     if (stack.getItem() instanceof SomEquipment equipment && equipment.getPlus() >= 1) {
                         return true;
@@ -54,17 +69,6 @@ public class QuestSpecial extends QuestPhase {
             }
         }
         return false;
-    }
-
-    @Override
-    public SomJson toJson() {
-        SomJson json = new SomJson();
-        return json;
-    }
-
-    @Override
-    public QuestPhase fromJson(SomJson json) {
-        return clone();
     }
 
     public enum SpecialID {

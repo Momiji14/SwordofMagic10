@@ -26,12 +26,12 @@ public class Cure extends SomSkill {
             target = playerData;
         }
         for (SomEffect effect : target.getEffect().values()) {
-            if (!effect.isBuff()) {
+            if (!effect.isBuff() && effect.getRank() == SomEffect.Rank.Normal) {
                 target.removeEffect(effect);
                 break;
             }
         }
-        SomParticle particle = new SomParticle(Particle.FIREWORKS_SPARK);
+        SomParticle particle = new SomParticle(Particle.FIREWORKS_SPARK, playerData);
         if (target != playerData) particle.line(playerData.getViewers(), playerData.getHandLocation(), ray.getHitPosition());
         particle.circleHeightTwin(playerData.getViewers(), target.getLivingEntity(), 1, 2, 3);
         SomSound.Heal.play(playerData.getViewers(), target.getSoundLocation());

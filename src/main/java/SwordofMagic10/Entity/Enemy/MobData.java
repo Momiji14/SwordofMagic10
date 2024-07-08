@@ -1,5 +1,6 @@
 package SwordofMagic10.Entity.Enemy;
 
+import SwordofMagic10.Entity.SomStatus;
 import SwordofMagic10.Entity.StatusType;
 import SwordofMagic10.Item.HowToGet;
 import me.libraryaddict.disguise.disguisetypes.Disguise;
@@ -9,7 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class MobData implements HowToGet {
+public class MobData implements SomStatus, HowToGet {
     private String Id;
     private String display;
     private EntityType entityType;
@@ -92,9 +93,9 @@ public class MobData implements HowToGet {
         return exp;
     }
 
-    public double getStatus(StatusType type) {
-        if (type == null) return 0;
-        return baseStatus.getOrDefault(type, 0d);
+    @Override
+    public HashMap<StatusType, Double> getStatus() {
+        return baseStatus;
     }
 
     public Tier getTier() {
@@ -112,18 +113,49 @@ public class MobData implements HowToGet {
         this.customClass = customClass;
     }
 
-    public void setStatus(StatusType type, double value) {
-        baseStatus.put(type, value);
-    }
-
     public List<DropData> getDropDataList() {
         return dropDataList;
     }
 
+    public void updateStatus() {
+        baseStatus.putIfAbsent(StatusType.MaxHealth, 100.0);
+        baseStatus.putIfAbsent(StatusType.MaxMana, 100.0);
+        baseStatus.putIfAbsent(StatusType.HealthRegen, 1.0);
+        baseStatus.putIfAbsent(StatusType.ManaRegen, 1.0);
+        baseStatus.putIfAbsent(StatusType.ATK, 10.0);
+        baseStatus.putIfAbsent(StatusType.MAT, 10.0);
+        baseStatus.putIfAbsent(StatusType.DEF, 10.0);
+        baseStatus.putIfAbsent(StatusType.MDF, 10.0);
+        baseStatus.putIfAbsent(StatusType.SPT, 10.0);
+        baseStatus.putIfAbsent(StatusType.Critical, 5.0);
+        baseStatus.putIfAbsent(StatusType.CriticalDamage, 5.0);
+        baseStatus.putIfAbsent(StatusType.CriticalResist, 5.0);
+        baseStatus.putIfAbsent(StatusType.DamageMultiply, 1.0);
+        baseStatus.putIfAbsent(StatusType.DamageResist, 1.0);
+        switch (getTier()) {
+            case Normal -> baseStatus.putIfAbsent(StatusType.Movement, 200.0);
+            case MiddleBoss -> baseStatus.putIfAbsent(StatusType.Movement, 250.0);
+            case Boss -> baseStatus.putIfAbsent(StatusType.Movement, 300.0);
+            case WorldRaidBoss, LegendRaidBoss -> baseStatus.putIfAbsent(StatusType.Movement, 350.0);
+        }
+    }
+
     public enum Tier {
-        RaidBoss,
-        Boss,
-        MiddleBoss,
-        Normal,
+        WorldRaidBoss(100),
+        LegendRaidBoss(100),
+        Boss(10),
+        MiddleBoss(5),
+        Normal(1),
+        ;
+
+        private final double multiply;
+
+        Tier(double multiply) {
+            this.multiply = multiply;
+        }
+
+        public double getMultiply() {
+            return multiply;
+        }
     }
 }

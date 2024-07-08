@@ -38,25 +38,26 @@ public class RecipeDataLoader {
         for (File file : SomLoader.dumpFile(new File(Config.DataBase, "RecipeData"))) {
             try {
                 FileConfiguration data = YamlConfiguration.loadConfiguration(file);
-                String id = SomLoader.fileId(file);
-                RecipeData recipe = new RecipeData();
-                recipe.setId(id);
-                for (String str : data.getStringList("Recipe")) {
-                    recipe.addRecipeSlot(ItemDataLoader.fromText(str));
+                if (data.isSet("Prefix")) {
+                    for (String prefix : data.getStringList("Prefix")) {
+                        RecipeData recipe = new RecipeData();
+                        recipe.setId(data.getString("RecipeID").replace("%Prefix%", prefix));
+                        for (String str : data.getStringList("Recipe")) {
+                            recipe.addRecipeSlot(ItemDataLoader.fromText(str.replace("%Prefix%", prefix)));
+                        }
+                        recipeDataList.put(recipe.getId(), recipe);
+                    }
+                } else {
+                    String id = SomLoader.fileId(file);
+                    RecipeData recipe = new RecipeData();
+                    recipe.setId(id);
+                    for (String str : data.getStringList("Recipe")) {
+                        recipe.addRecipeSlot(ItemDataLoader.fromText(str));
+                    }
+                    recipeDataList.put(id, recipe);
                 }
-                recipeDataList.put(id, recipe);
             } catch (Exception e) {
                 SomLoader.error(file, e);
-            }
-        }
-
-        for (SomItem item : ItemDataLoader.getItemDataList()) {
-            if (item.getId().contains("の原木")) {
-                String id = item.getId().replace("原木", "木材");
-                SomItem newItem = item.clone();
-                RecipeData recipeData = new RecipeData();
-                recipeData.addRecipeSlot(new SomItemStack(newItem, 1));
-                recipeDataList.put(id, recipeData);
             }
         }
     }

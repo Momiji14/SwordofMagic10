@@ -15,7 +15,7 @@ public class Meditation extends SomSkill {
     @Override
     public String active() {
         playerData.addMana(playerData.getMaxMana()*0.3);
-        SomParticle particle = new SomParticle(Color.AQUA);
+        SomParticle particle = new SomParticle(Color.AQUA, playerData);
         particle.circleHeightTwin(playerData.getViewers(), playerData.getLocation(), 1, 2, 2);
         SomSound.Heal.play(playerData.getViewers(), playerData.getSoundLocation());
         return null;

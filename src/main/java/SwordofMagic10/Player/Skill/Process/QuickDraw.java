@@ -19,14 +19,9 @@ public class QuickDraw extends SomSkill {
         super(playerData);
     }
 
-    private boolean trigger = false;
     @Override
-    public boolean cast() {
-        if (!trigger) {
-            trigger = true;
-            SomSound.Tick.play(playerData.getViewers(), playerData.getSoundLocation());
-        }
-        return super.cast();
+    public void castFirstTick() {
+        SomSound.Tick.play(playerData.getViewers(), playerData.getSoundLocation());
     }
 
     @Override
@@ -34,12 +29,11 @@ public class QuickDraw extends SomSkill {
         SomRay ray = SomRay.rayLocationEntity(playerData, getReach(), 0.1, playerData.getTargets(), false);
         if (ray.isHitEntity()) {
             Damage.makeDamage(playerData, ray.getHitEntity(), DamageEffect.None, DamageOrigin.ATK, headShot(playerData, ray, getDamage(), getHeadDamage()));
-            ray.getHitEntity().addEffect(SomEffect.List.Stun.getEffect().setTime(getDuration()));
+            ray.getHitEntity().addEffect(SomEffect.List.Stun.getEffect().setTime(getDuration()), playerData);
         }
-        SomParticle particle = new SomParticle(Particle.CRIT);
+        SomParticle particle = new SomParticle(Particle.CRIT, playerData);
         particle.line(playerData.getViewers(), playerData.getHandLocation(), ray.getOriginPosition());
         SomSound.Handgun.play(playerData.getViewers(), playerData.getSoundLocation());
-        trigger = false;
         return null;
     }
 }

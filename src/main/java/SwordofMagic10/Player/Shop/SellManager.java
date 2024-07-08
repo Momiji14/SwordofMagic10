@@ -6,6 +6,7 @@ import SwordofMagic10.Item.SomItem;
 import SwordofMagic10.Item.SomItemStack;
 import SwordofMagic10.Player.GUIManager;
 import SwordofMagic10.Player.PlayerData;
+import SwordofMagic10.Player.PlayerRank;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -15,6 +16,7 @@ import static SwordofMagic10.Component.Function.MinMax;
 
 public class SellManager extends GUIManager.Bar {
     private final SomInventory sellInventory;
+    public static final PlayerRank AnyWhereRank = PlayerRank.Gold;
 
     public SellManager(PlayerData playerData) {
         super(playerData, "アイテム売却", 6);
@@ -35,7 +37,7 @@ public class SellManager extends GUIManager.Bar {
                 sellInventory.remove(item, amount);
                 playerData.getItemInventory().add(item, amount);
                 playerData.removeMel(mel);
-                playerData.sendSomText(item.toSomText(amount).addText("§aを§b買戻§aしました"), SomSound.Tick);
+                playerData.sendSomText(item.toSomText(amount).add("§aを§b買戻§aしました"), SomSound.Tick);
                 update();
             } else {
                 playerData.sendMessageNonMel();
@@ -50,9 +52,10 @@ public class SellManager extends GUIManager.Bar {
         if (playerData.getInventoryViewer().isSomItemStack(clickedItem)) {
             SomItemStack stack = playerData.getInventoryViewer().getSomItemStack(clickedItem);
             SomItem item = stack.getItem();
-            if (!item.isLock()) {
+            if (!item.isFavorite()) {
                 if (item.getSell() != -1) {
                     int amount = MinMax(super.amount, 0, stack.getAmount());
+                    if (event.getClick().isShiftClick()) amount = stack.getAmount();
                     playerData.getItemInventory().remove(item, amount);
                     sellInventory.add(item, amount);
                     int mel = item.getSell() * amount;

@@ -3,9 +3,8 @@ package SwordofMagic10.Player.Menu;
 import SwordofMagic10.Component.Config;
 import SwordofMagic10.Component.CustomItemStack;
 import SwordofMagic10.Component.SomSound;
-import SwordofMagic10.Item.SomItem;
-import SwordofMagic10.Item.SomItemStack;
-import SwordofMagic10.Item.SomQuality;
+import SwordofMagic10.Item.*;
+import SwordofMagic10.Player.Dungeon.DungeonDifficulty;
 import SwordofMagic10.Player.GUIManager;
 import SwordofMagic10.Player.PlayerData;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -16,13 +15,17 @@ import static SwordofMagic10.Component.Function.*;
 
 public class TierMenu extends GUIManager {
 
-    public static final int[] TierReqLevel = {1, 25, 40, 50};
-
-    private SomItem item;
+    public final int[] TierReqLevel;
+    private SomQuality item;
     private SomItem tierStone;
     private int stoneAmount = 0;
     public TierMenu(PlayerData playerData) {
         super(playerData, "アイテム昇級", 1);
+        int size = DungeonDifficulty.values().length;
+        TierReqLevel = new int[size];
+        for (int i = 0; i < size; i++) {
+            TierReqLevel[i] = DungeonDifficulty.values()[i].getLevel();
+        }
     }
 
     @Override
@@ -33,10 +36,12 @@ public class TierMenu extends GUIManager {
                 item = null;
                 tierStone = null;
                 stoneAmount = 0;
+                SomSound.Tick.play(playerData);
             }
             case 4 -> {
                 tierStone = null;
                 stoneAmount = 0;
+                SomSound.Tick.play(playerData);
             }
             case 7 -> {
                 if (item != null && tierStone != null) {
@@ -47,19 +52,20 @@ public class TierMenu extends GUIManager {
                             playerData.getItemInventory().remove(tierStone, stoneAmount);
                             String percentText = " §e(" + scale(percent*100) + "%)";
                             if (randomDouble(0.0, 1.0) < percent) {
-                                playerData.sendSomText(item.toSomText().addText("§aの§e昇級§aに§b成功§aしました" + percentText), SomSound.Level);
+                                playerData.sendSomText(item.toSomText().add("§aの§e昇級§aに§b成功§aしました" + percentText), SomSound.Level);
                                 item.setTier(item.getTier() + 1);
+                                item.randomQuality();
                                 item = null;
                                 tierStone = null;
                                 stoneAmount = 0;
                             } else {
-                                playerData.sendSomText(item.toSomText().addText("§aの§e昇級§aに§c失敗§aしました" + percentText), SomSound.Tick);
+                                playerData.sendSomText(item.toSomText().add("§aの§e昇級§aに§c失敗§aしました" + percentText), SomSound.Tick);
                             }
                         } else {
                             playerData.sendMessage("§eメル§aが足りません", SomSound.Nope);
                         }
                     } else {
-                        playerData.sendSomText(tierStone.toSomText(stoneAmount).addText("§aが足りません"), SomSound.Nope);
+                        playerData.sendSomText(tierStone.toSomText(stoneAmount).add("§aが足りません"), SomSound.Nope);
                     }
                 }
             }
@@ -74,9 +80,10 @@ public class TierMenu extends GUIManager {
             SomItemStack stack = playerData.getInventoryViewer().getSomItemStack(clickedItem);
             SomItem item = stack.getItem();
             if (this.item == null) {
-                if (item instanceof SomQuality somQuality) {
-                    if (somQuality.getLevel() >= TierReqLevel[item.getTier()]) {
-                        this.item = item;
+                if (item instanceof SomQuality quality) {
+                    if (quality.getLevel() >= TierReqLevel[item.getTier()]) {
+                        this.item = quality;
+                        SomSound.Tick.play(playerData);
                     } else {
                         playerData.sendMessage("§aこの§eアイテム§aは§eLv" + TierReqLevel[item.getTier()] + "§aで§e昇級可能§aです", SomSound.Nope);
                     }
@@ -140,6 +147,7 @@ public class TierMenu extends GUIManager {
             item.addLore(decoLore("消費メル") + mel());
             item.addLore(decoLore("消費昇級石") + stoneAmount);
             item.addLore(decoLore("昇級確率") + scale(percent()*100, 2) + "%");
+            item.addLore("§c※品質はリロールされます");
             setItem(7, item);
         } else {
             setItem(7, Config.AirItem);

@@ -16,26 +16,23 @@ public class DivineMight extends SomSkill {
     }
 
     @Override
-    public boolean cast() {
-        SomParticle particle = new SomParticle(Color.PURPLE);
-        particle.circle(playerData.getViewers(), playerData.getLocation(), getRadius());
-        return super.cast();
-    }
-
-    @Override
     public String active() {
-        SomParticle particle = new SomParticle(Color.PURPLE);
-        particle.circleFill(playerData.getViewers(), playerData.getLocation(), getRadius());
-        for (SomEntity ally : playerData.getAllies(getRadius())) {
-            for (SomEffect effect : ally.getEffect().values()) {
-                if (effect.isBuff() && !effect.isExtend()) {
+        SomParticle particle = new SomParticle(Color.PURPLE, playerData);
+
+        for (SomEntity member : playerData.getMember()){
+            //パーティクル
+            particle.circleHeightTwin(playerData.getViewers(), member.getLivingEntity(), 1, 2, 3);
+            //エフェクト
+            for (SomEffect effect : member.getEffect().values()) {
+                if (effect.isBuff() && !effect.isExtend() && effect.getRank() != SomEffect.Rank.Impossible) {
                     effect.addTime((int) (Math.max(getParameter(SkillParameterType.DivineMightMin), effect.getTime() * getParameter(SkillParameterType.DivineMight))));
                     effect.setExtend(true);
                 }
             }
-            particle.circleHeightTwin(playerData.getViewers(), ally.getLivingEntity(), 1, 2, 3);
-            SomSound.Heal.play(ally);
+            //サウンド
+            SomSound.Heal.play(member);
         }
+
         return null;
     }
 }

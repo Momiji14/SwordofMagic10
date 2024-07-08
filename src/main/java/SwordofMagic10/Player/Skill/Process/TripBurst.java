@@ -18,14 +18,9 @@ public class TripBurst extends SomSkill {
         super(playerData);
     }
 
-    private boolean trigger = false;
     @Override
-    public boolean cast() {
-        if (!trigger) {
-            trigger = true;
-            SomSound.Tick.play(playerData.getViewers(), playerData.getSoundLocation());
-        }
-        return super.cast();
+    public void castFirstTick() {
+        SomSound.Tick.play(playerData.getViewers(), playerData.getSoundLocation());
     }
 
     @Override
@@ -34,7 +29,7 @@ public class TripBurst extends SomSkill {
         double count = getCount();
         double damage = getDamage() / count;
         double headDamage = getHeadDamage() / count;
-        SomParticle particle = new SomParticle(Particle.CRIT);
+        SomParticle particle = new SomParticle(Particle.CRIT, playerData);
         for (int i = 0; i < count; i++) {
             SomRay ray = SomRay.rayLocationEntity(playerData, reach, 0.1, playerData.getTargets(), false);
             if (ray.isHitEntity()) {
@@ -44,7 +39,6 @@ public class TripBurst extends SomSkill {
             SomSound.Handgun.play(playerData.getViewers(), playerData.getSoundLocation());
             SomTask.wait(100);
         }
-        trigger = false;
         return null;
     }
 }

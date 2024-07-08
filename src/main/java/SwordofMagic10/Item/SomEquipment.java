@@ -1,6 +1,7 @@
 package SwordofMagic10.Item;
 
 import SwordofMagic10.Component.Function;
+import SwordofMagic10.Entity.EquipSlot;
 import SwordofMagic10.Entity.SomStatus;
 import SwordofMagic10.Entity.StatusType;
 import SwordofMagic10.Player.Classes.Classes;
@@ -9,7 +10,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class SomEquipment extends SomQuality implements SomStatus, Cloneable {
+public class SomEquipment extends SomEquip implements SomStatus, Cloneable {
+    public static final int MaxRuneSlot = 4;
     private final static int[] ReqExp = new int[Classes.MaxLevel];
 
     static {
@@ -27,7 +29,7 @@ public class SomEquipment extends SomQuality implements SomStatus, Cloneable {
     private EquipmentCategory equipmentCategory;
     private List<SomRune> rune = new ArrayList<>();
     private int runeSlot = 0;
-    private int plus = 0;
+    private String series;
 
     public SomEquipment() {
         setItemCategory(ItemCategory.Equipment);
@@ -38,13 +40,8 @@ public class SomEquipment extends SomQuality implements SomStatus, Cloneable {
         return status;
     }
 
-    @Override
-    public void setStatus(StatusType status, double value) {
-        this.status.put(status, value);
-    }
-
     public double getStatusLevelSync(StatusType statusType, int levelSync, int tierSync) {
-        double value = getStatus(statusType) * (1 + (Math.min(levelSync, getLevel())-1) * 0.125) * (0.75 + getQuality()*0.5) * (1 + ((Math.min(tierSync, getTier())-1)) * 0.15);
+        double value = getStatus(statusType) * (1 + (Math.min(levelSync, getLevel())-1) * 0.08) * (0.75 + getQuality()*0.5) * Math.pow(1.35, Math.min(tierSync, getTier())-1) * (1 + getPlus()*0.1);
         for (SomRune rune : getRune()) {
             value += rune.getStatusLevelSync(statusType, levelSync, tierSync);
         }
@@ -68,19 +65,11 @@ public class SomEquipment extends SomQuality implements SomStatus, Cloneable {
     }
 
     public int getRuneSlot() {
-        return runeSlot + getTier();
+        return Math.min(runeSlot + getTier(), 4);
     }
 
     public void setRuneSlot(int runeSlot) {
         this.runeSlot = runeSlot;
-    }
-
-    public int getPlus() {
-        return plus;
-    }
-
-    public void setPlus(int plus) {
-        this.plus = plus;
     }
 
     public List<SomRune> getRune() {
@@ -101,6 +90,18 @@ public class SomEquipment extends SomQuality implements SomStatus, Cloneable {
         this.rune.add(rune);
     }
 
+    public String getSeries() {
+        return series;
+    }
+
+    public void setSeries(String series) {
+        this.series = series;
+    }
+
+    public boolean hasSeries() {
+        return series != null;
+    }
+
     @Override
     public SomEquipment clone() {
         SomEquipment clone = (SomEquipment) super.clone();
@@ -111,5 +112,10 @@ public class SomEquipment extends SomQuality implements SomStatus, Cloneable {
         clone.setExp(getExp());
         clone.setQuality(getQuality());
         return clone;
+    }
+
+    @Override
+    public EquipSlot getEquipSlot() {
+        return equipmentCategory.getEquipSlot();
     }
 }

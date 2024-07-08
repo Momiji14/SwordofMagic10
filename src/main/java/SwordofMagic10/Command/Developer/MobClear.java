@@ -1,5 +1,6 @@
 package SwordofMagic10.Command.Developer;
 
+import SwordofMagic10.Board;
 import SwordofMagic10.Command.SomCommand;
 import SwordofMagic10.Component.Config;
 import SwordofMagic10.Component.SomTask;
@@ -13,6 +14,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.metadata.MetadataValue;
+
+import static SwordofMagic10.SomCore.Log;
 
 public class MobClear implements SomCommand {
     @Override
@@ -37,7 +40,7 @@ public class MobClear implements SomCommand {
     public static int clean(World world) {
         int i = 0;
         for (Entity entity : world.getEntities()) {
-            if (clean(entity)) i++;;
+            if (clean(entity)) i++;
         }
         return i;
     }
@@ -51,28 +54,20 @@ public class MobClear implements SomCommand {
     }
 
     public static boolean clean(Entity entity) {
-        if (entity.hasMetadata(Config.EnemyMetaAddress)) {
-            for (MetadataValue metadata : entity.getMetadata(Config.EnemyMetaAddress)) {
-                if (metadata.getOwningPlugin() == (SomCore.plugin())) {
-                    if (metadata.value() instanceof EnemyData enemyData) {
-                        enemyData.delete();
-                        return true;
-                    }
-                }
-            }
+        if (entity.getScoreboardTags().contains(Config.SomEntityTag)) {
+            SomTask.sync(entity::remove);
+            return true;
         }
         return cleanOther(entity);
     }
 
     public static boolean cleanOther(Entity entity) {
         switch (entity.getType()) {
-            case ITEM_FRAME, GLOW_ITEM_FRAME, PLAYER -> {}
+            case ITEM_FRAME, GLOW_ITEM_FRAME, PLAYER, VILLAGER, WANDERING_TRADER -> {}
             default -> {
-                if (!entity.getScoreboardTags().contains("NoClear")) {
-                    if (entity.getName().contains("§c《") || entity.hasMetadata(Config.SomParticleMetaAddress)) {
-                        SomTask.sync(entity::remove);
-                        return true;
-                    }
+                if (!entity.getScoreboardTags().contains("NoClear") && !entity.getScoreboardTags().contains(Board.Tag)) {
+                    SomTask.sync(entity::remove);
+                    return true;
                 }
             }
         }

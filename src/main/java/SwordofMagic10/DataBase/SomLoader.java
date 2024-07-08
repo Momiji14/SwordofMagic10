@@ -1,5 +1,7 @@
 package SwordofMagic10.DataBase;
 
+import SwordofMagic10.Player.Dungeon.Instance.DefensiveBattle;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,13 +37,19 @@ public interface SomLoader {
         HelpDataLoader.load();
         ItemDataLoader.load();
         MobDataLoader.load();
+        MapDataLoader.load();
         DungeonDataLoader.load();
         QuestDataLoader.load();
         RecipeDataLoader.load();
-        ShopDataLoader.load();
         SkillGroupLoader.load();
         SkillDataLoader.load();
         AchievementDataLoader.load();
         ProduceDataLoader.load();
+        ShopDataLoader.load();
+        SpawnerDataLoader.load();
+        TypingDataLoader.load();
+
+        DefensiveBattle.initialize();
+        MapDataLoader.start();
     }
 }

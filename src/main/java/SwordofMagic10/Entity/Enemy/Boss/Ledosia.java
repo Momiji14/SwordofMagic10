@@ -1,13 +1,16 @@
 package SwordofMagic10.Entity.Enemy.Boss;
 
 import SwordofMagic10.Component.*;
-import SwordofMagic10.Dungeon.DungeonDifficulty;
+import SwordofMagic10.Player.Dungeon.DungeonDifficulty;
+import SwordofMagic10.Player.Dungeon.Instance.DungeonInstance;
 import SwordofMagic10.Entity.Damage;
 import SwordofMagic10.Entity.DamageEffect;
 import SwordofMagic10.Entity.Enemy.DamageOrigin;
 import SwordofMagic10.Entity.Enemy.MobData;
 import SwordofMagic10.Entity.SomEntity;
+import SwordofMagic10.Player.Map.MapData;
 import SwordofMagic10.Player.PlayerData;
+import SwordofMagic10.Entity.DurationSkill;
 import SwordofMagic10.SomCore;
 import org.bukkit.Color;
 import org.bukkit.Location;
@@ -18,14 +21,17 @@ import java.util.*;
 
 import static SwordofMagic10.Component.Function.randomDouble;
 import static SwordofMagic10.Component.Function.randomInt;
-import static SwordofMagic10.Dungeon.Instance.DungeonInstance.Radius;
+import static SwordofMagic10.Player.Dungeon.Instance.DungeonInstance.Radius;
 
 public class Ledosia extends EnemyBoss {
 
-    public Ledosia(MobData mobData, int level, DungeonDifficulty difficulty, Location location, Collection<PlayerData> viewers) {
-        super(mobData, level, difficulty, location, viewers);
+    private final Ledosia ledosia;
+    public Ledosia(MobData mobData, int level, DungeonDifficulty difficulty, Location location, Collection<PlayerData> viewers, MapData mapData, DungeonInstance dungeon) {
+        super(mobData, level, difficulty, location, viewers, mapData, dungeon);
+        ledosia = this;
     }
 
+    //radius = 45
     private final CustomLocation pivot = new CustomLocation(SomCore.World, 500.5, -10 , 500.5);
 
     @Override
@@ -42,51 +48,48 @@ public class Ledosia extends EnemyBoss {
     public void shelling() {
         shellingWait = 10;
         SomTask.run(() -> {
-            SomParticle particle = new SomParticle(Color.RED);
-            particle.setTime(1000);
-            CustomLocation location = getTarget().getLocation();
-            particle.line(getViewers(), getEyeLocation(), location, 0.5);
-            for (SomEntity entity : SomEntity.nearSomEntity(getTargets(), location, 3)) {
-                Damage.makeDamage(this, entity, DamageEffect.Fire, DamageOrigin.MAT, 2);
+            if (isTargeting()) {
+                SomParticle particle = new SomParticle(Color.RED, ledosia);
+                particle.setTime(1000);
+                CustomLocation location = getTarget().getLocation();
+                particle.line(getViewers(), getEyeLocation(), location, 0.5);
+                for (SomEntity entity : SomEntity.nearSomEntity(getTargets(), location, 3)) {
+                    Damage.makeDamage(this, entity, DamageEffect.Fire, DamageOrigin.MAT, 2);
+                }
             }
         });
-        SomTask.run(() -> {
-            for (int i = 0; i < shellingTick[getDifficulty().ordinal()]; i++) {
-                AreaOfRiskTick();
-                SomTask.wait(150);
-            }
-        });
+        DurationSkill.Count count = DurationSkill.count(ledosia, 3, shellingTick[getDifficulty().index()]);
+        count.setRunnable(this::AreaOfRiskTick);
+        count.run();
     }
 
     private boolean snipeDance = true;
     private final String[] snipeDanceMessage = {"§c「誰かを殺すことで明日を生きられる」", "§c「生きるために引き金を引く」", "§c「いつ自分が同じ目に合うか怯えながら暮らす」"};
-    private final int[] snipeDanceTick = {10, 50, 100, 200};
-    private final int[] snipeDanceWait = {500, 200, 100, 50};
+    private final int[] snipeDanceCount = {10, 50, 100, 200};
+    private final int[] snipeDanceWaitTick = {10, 4, 2, 1};
     public void SnipeDance() {
         snipeDance = false;
         sendBossSkillMessage(snipeDanceMessage);
         SomTask.delay(() -> {
-            for (int i = 0; i < snipeDanceTick[getDifficulty().ordinal()]; i++) {
-                if (isInvalid()) return;
-                SnipeDanceTick();
-                SomTask.wait(snipeDanceWait[getDifficulty().ordinal()]);
-            }
+            DurationSkill.Count count = DurationSkill.count(ledosia, snipeDanceWaitTick[getDifficulty().index()], snipeDanceCount[getDifficulty().index()]);
+            count.setRunnable(this::SnipeDanceTick);
+            count.run();
         }, 60);
+
     }
 
     public void SnipeDanceTick() {
         for (PlayerData target : getViewers(Radius)) {
+            if (target.isDeath()) continue;
             SomTask.run(() -> {
-                final SomParticle shotParticle = new SomParticle(Particle.FIREWORKS_SPARK);
-                final SomParticle predictParticle = new SomParticle(Color.RED);
+                final SomParticle shotParticle = new SomParticle(Particle.FIREWORKS_SPARK, ledosia);
                 CustomLocation start = getEyeLocation().clone();
                 start.lookLocation(target.getEyeLocation());
                 SomTask.wait(750);
                 SomRay ray = SomRay.rayLocationEntity(getTargets(), start, 70, 1.5, true);
-                predictParticle.line(getViewers(Radius), start, 70, 1.5, 5);
-                shotParticle.line(getViewers(Radius), start, 70, 1.5, 5);
+                shotParticle.line(getViewers(Radius), start, 70, 1.5, 2);
                 for (SomEntity hitEntity : ray.getHitEntities()) {
-                    Damage.makeDamage(getEnemyData(), hitEntity, DamageEffect.Fire, DamageOrigin.MAT, 0.25);
+                    Damage.makeDamage(getEnemyData(), hitEntity, DamageEffect.Fire, DamageOrigin.ATK, 4);
                     SomSound.Fire.play(hitEntity);
                 }
             });
@@ -95,30 +98,28 @@ public class Ledosia extends EnemyBoss {
 
     private boolean areaOfRisk = true;
     private final String[] areaOfRiskMessage = {"§c「皆自分だけが安全だと思い込む」", "§c「安心は自分で手に入れるものだった」", "§c「息を吸う暇もない」"};
-    private final int[] areaOfRiskTick = {25, 85, 175, 300};
-    private final int[] areaOfRiskWait = {1000, 250, 125, 75};
+    private final int[] areaOfRiskCount = {25, 85, 175, 300};
+    private final int[] areaOfRiskWaitTick = {20, 8, 4, 2};
     public void AreaOfRisk() {
         areaOfRisk = false;
         sendBossSkillMessage(areaOfRiskMessage);
         SomTask.delay(() -> {
-            for (int i = 0; i < areaOfRiskTick[getDifficulty().ordinal()]; i++) {
-                if (isInvalid()) return;
-                AreaOfRiskTick();
-                SomTask.wait(areaOfRiskWait[getDifficulty().ordinal()]);
-            }
+            DurationSkill.Count count = DurationSkill.count(ledosia, areaOfRiskWaitTick[getDifficulty().index()], areaOfRiskCount[getDifficulty().index()]);
+            count.setRunnable(this::AreaOfRiskTick);
+            count.run();
         }, 60);
     }
 
     public void AreaOfRiskTick() {
-        final SomParticle shotParticle = new SomParticle(Particle.FIREWORKS_SPARK);
-        final SomParticle predictParticle = new SomParticle(Color.RED);
-        final SomParticle circleParticle = new SomParticle(Particle.LAVA);
+        final SomParticle shotParticle = new SomParticle(Particle.FIREWORKS_SPARK, ledosia);
+        final SomParticle predictParticle = new SomParticle(Color.RED, ledosia);
+        final SomParticle circleParticle = new SomParticle(Particle.LAVA, ledosia);
         circleParticle.setVectorUp();
         SomTask.run(() -> {
             List<SomEntity> list = new ArrayList<>(getViewers(pivot, Radius));
             list.removeAll(getViewers(pivot, 35));
             for (SomEntity hitEntity : list) {
-                Damage.makeDamage(getEnemyData(), hitEntity, DamageEffect.Fire, DamageOrigin.MAT, 0.60);
+                Damage.makeDamage(getEnemyData(), hitEntity, DamageEffect.Fire, DamageOrigin.MAT, 4);
                 SomSound.Fire.play(hitEntity);
             }
 
@@ -134,22 +135,20 @@ public class Ledosia extends EnemyBoss {
                     homing = true;
                 }
             }
-            if (!homing) {
-                start.lookLocation(pivot);
-                start.addYaw((float) randomDouble(-10, 10));
-            }
+            if (!homing) start.lookLocation(pivot);
+            start.addYaw((float) randomDouble(-10, 10));
             start.setPitch(0);
 
             for (int j = 0; j < 3; j++) {
-                predictParticle.line(getViewers(Radius), start, 70, 0.25, 4);
+                predictParticle.line(getViewers(Radius), start, 70, 0.35, 4);
                 SomTask.wait(250);
             }
 
             SomSound.Handgun.play(getViewers(Radius));
-            SomRay ray = SomRay.rayLocationEntity(getTargets(), start, 70, 0.25, true);
-            shotParticle.line(getViewers(Radius), start, ray.getOriginPosition(), 0.25, 3);
+            SomRay ray = SomRay.rayLocationEntity(getTargets(), start, 70, 0.35, true);
+            shotParticle.line(getViewers(Radius), start, ray.getOriginPosition(), 0.35, 3);
             for (SomEntity hitEntity : ray.getHitEntities()) {
-                Damage.makeDamage(getEnemyData(), hitEntity, DamageEffect.Fire, DamageOrigin.ATK, 0.70);
+                Damage.makeDamage(getEnemyData(), hitEntity, DamageEffect.Fire, DamageOrigin.ATK, 1);
             }
         });
     }
@@ -162,7 +161,7 @@ public class Ledosia extends EnemyBoss {
             new Location(SomCore.World, 500.5, -9.9, 474.5),
     };
     private final String[] russianRouletteColor = {"§d", "§c", "§6", "§e"};
-    private final String[] russianRouletteMessage = {"§c「危険には価値がある」", "§c「大きなリターンにはリスクがつくものです」", "§c「自分の運命を人に任せるのですか？」"};
+    private final String[] russianRouletteMessage = {"§c「危険には価値がある」", /*"§c「大きなリターンにはリスクがつくものです」",  "§c「自分の運命を人に任せるのですか？」"*/};
     public void RussianRoulette() {
         russianRoulette = false;
         sendBossSkillMessage(russianRouletteMessage);
@@ -173,7 +172,7 @@ public class Ledosia extends EnemyBoss {
                 for (PlayerData playerData : players) {
                     switch (getDifficulty()) {
                         case Easy -> playerData.sendBossBarMessage("§d魔法陣§aの外へ出るな", 120, true);
-                        case Normal, Hard, Expert -> {
+                        default -> {
                             index.put(playerData, randomInt(0, 4));
                             playerData.sendBossBarMessage("§e指定§aの" + russianRouletteColor[index.get(playerData)] + "魔法陣§aへ§c避難§aしてください",120, true);
                             playerData.teleport(new Location(SomCore.World, 500.5, -9.9, 525, -180, 0));
@@ -182,7 +181,7 @@ public class Ledosia extends EnemyBoss {
                 }
                 BukkitTask task;
                 if (getDifficulty() == DungeonDifficulty.Normal) {
-                    SomParticle particle = new SomParticle(Particle.FIREWORKS_SPARK);
+                    SomParticle particle = new SomParticle(Particle.FIREWORKS_SPARK, ledosia);
                     task = SomTask.timer(() -> {
                         for (PlayerData playerData : players) {
                             particle.circle(Collections.singleton(playerData), russianRouletteLocation[index.get(playerData)], 5);

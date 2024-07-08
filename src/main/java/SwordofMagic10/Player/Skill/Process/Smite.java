@@ -23,17 +23,17 @@ public class Smite extends SomSkill {
         double reach = getReach();
         double radius = getRadius();
         double damage = getDamage();
-        CustomLocation center = playerData.getLocation().frontHorizon(reach).addY(0.1);;
-        for (SomEntity entity : SomEntity.nearSomEntity(playerData.getTargets(), center, radius)) {
-            Damage.makeDamage(playerData, entity, DamageEffect.Holy, DamageOrigin.ATK, damage);
-            SomTask.wait(50);
-        }
-        SomParticle particle = new SomParticle(Particle.CRIT);
-        SomParticle particle2 = new SomParticle(Particle.FIREWORKS_SPARK);
+        CustomLocation center = playerData.getLocation().frontHorizon(reach).addY(0.1);
+        SomParticle particle = new SomParticle(Particle.CRIT, playerData);
+        SomParticle particle2 = new SomParticle(Particle.FIREWORKS_SPARK, playerData);
         particle.circleFill(playerData.getViewers(), center, radius);
         particle.widthLine(playerData.getViewers(), playerData.getEyeLocation(), reach, 2, 1);
         particle2.widthLine(playerData.getViewers(), playerData.getEyeLocation(), reach, 2, 1);
         SomSound.Slash.play(playerData.getViewers(), playerData.getSoundLocation());
+        for (SomEntity entity : SomEntity.nearSomEntity(playerData.getTargets(), center, radius)) {
+            Damage.makeDamage(playerData, entity, DamageEffect.Holy, DamageOrigin.ATK, damage);
+            SomTask.wait(50);
+        }
         return null;
     }
 }

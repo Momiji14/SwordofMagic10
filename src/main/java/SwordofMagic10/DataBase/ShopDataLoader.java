@@ -1,8 +1,11 @@
 package SwordofMagic10.DataBase;
 
 import SwordofMagic10.Component.Config;
+import SwordofMagic10.Item.SomEquipment;
 import SwordofMagic10.Item.SomItem;
 import SwordofMagic10.Item.SomItemStack;
+import SwordofMagic10.Player.Dungeon.Instance.DungeonInstance;
+import SwordofMagic10.Player.Map.MapData;
 import SwordofMagic10.Player.Shop.ShopData;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -20,7 +23,7 @@ public class ShopDataLoader {
 
     private static final HashMap<String, ShopData> shopDataList = new HashMap<>();
     public static ShopData getShopData(String id) {
-        if (!shopDataList.containsKey(id)) Log("§c存在しないShopが参照されました -> " + id);
+        if (!shopDataList.containsKey(id)) Log("§c存在しないShopが参照されました -> " + id, true);
         return shopDataList.get(id);
     }
     public static Collection<ShopData> getShopDataList() {
@@ -74,5 +77,32 @@ public class ShopDataLoader {
                 SomLoader.error(file, e);
             }
         }
+
+        for (DungeonInstance dungeonInstance : DungeonDataLoader.getDungeonList()) {
+            if (!dungeonInstance.isLegendRaid()) {
+                String id = dungeonInstance.getId();
+                ShopData shopData = new ShopData();
+                shopData.setId(id);
+                shopData.setDisplay(dungeonInstance.getDisplay() + "の装備");
+                MapData mapData = MapDataLoader.getMapData(id);
+                int slot = 0;
+                for (String series : dungeonInstance.getSeries()) {
+                    //int slot = index * 9;
+                    for (SomEquipment baseEquip : ItemDataLoader.getSeries(series)) {
+                        SomEquipment equipment = baseEquip.clone();
+                        ShopData.ShopSlot shopSlot = new ShopData.ShopSlot();
+                        equipment.setLevel(mapData.getMaxLevel());
+                        shopSlot.setItem(equipment);
+                        shopSlot.setMel(100);
+                        shopSlot.setRecipe(RecipeDataLoader.getRecipeData(id));
+                        shopData.setShopSlot(slot, shopSlot);
+                        slot++;
+                    }
+                    //index++;
+                }
+                shopDataList.put(id, shopData);
+            }
+        }
+        Log("§a[ShopDataLoader]§b" + shopDataList.size() + "個をロードしました");
     }
 }

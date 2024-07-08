@@ -2,6 +2,7 @@ package SwordofMagic10.Item;
 
 import SwordofMagic10.Component.CustomItemStack;
 import SwordofMagic10.Component.SomJson;
+import SwordofMagic10.Component.SomText;
 
 import static SwordofMagic10.Component.Function.decoLore;
 
@@ -39,12 +40,66 @@ public class SomItemStack implements Cloneable {
         this.amount -= amount;
     }
 
+    public SomItem.ItemCategory sortItemCategory() {
+        return item.getItemCategory();
+    }
+
+    public String sortName() {
+        return item.getDisplay();
+    }
+
+    public int sortSell() {
+        return item.getSell();
+    }
+
+    public int sortTier() {
+        return item.getTier();
+    }
+
+    public int sortLevel() {
+        if (item instanceof SomQuality quality) {
+            return quality.getLevel();
+        } else return 0;
+    }
+
+    public double sortQuality() {
+        if (item instanceof SomQuality quality) {
+            return quality.getQuality();
+        } else return 0.0;
+    }
+
+    public EquipmentCategory sortEquipmentCategory() {
+        if (item instanceof SomEquip equip) {
+            return equip.getEquipmentCategory();
+        } else return EquipmentCategory.None;
+    }
+
+    public int sortEquipmentExp() {
+        if (item instanceof SomQuality quality) {
+            return quality.getExp();
+        } else return 0;
+    }
+
+    public double sortRunePower() {
+        if (item instanceof SomRune rune) {
+            return rune.getPower();
+        } else return 0.0;
+    }
+
+    public boolean sortFavorite() {
+        return item.isFavorite();
+    }
+
     public CustomItemStack viewItem() {
         CustomItemStack item = this.item.viewItem();
         item.addSeparator("スタック情報");
         item.addLore(decoLore("個数") + amount);
         item.addLore(decoLore("売値") + (this.item.getSell() >= 0 ? this.item.getSell() * amount : "§4不可"));
         return item;
+    }
+
+    public SomText toSomText() {
+        return  item.toSomText(amount);
     }
 
     public SomJson toJson() {

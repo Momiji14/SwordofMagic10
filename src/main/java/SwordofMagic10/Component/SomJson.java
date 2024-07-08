@@ -7,6 +7,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
+import static SwordofMagic10.Component.Function.scale;
+
 public class SomJson {
     private JsonObject root;
 
@@ -88,28 +90,42 @@ public class SomJson {
         objectPath(key).addProperty(lastKey(key), value);
     }
 
-    public void set(String key, int value) {
+    public SomJson set(String key, int value) {
         objectPath(key).addProperty(lastKey(key), value);
+        return this;
     }
 
-    public void set(String key, long value) {
+    public SomJson set(String key, long value) {
         objectPath(key).addProperty(lastKey(key), value);
+        return this;
     }
 
-    public void set(String key, double value) {
-        objectPath(key).addProperty(lastKey(key), value);
+    public SomJson set(String key, double value) {
+        return set(key, value, 4);
     }
 
-    public void set(String key, float value) {
-        objectPath(key).addProperty(lastKey(key), value);
+    public SomJson set(String key, double value, int scale) {
+        objectPath(key).addProperty(lastKey(key), scale(value, scale));
+        return this;
     }
 
-    public void set(String key, boolean value) {
-        objectPath(key).addProperty(lastKey(key), value);
+    public SomJson set(String key, float value) {
+        return set(key, value, 4);
     }
 
-    public void set(String key, SomJson value) {
+    public SomJson set(String key, float value, int scale) {
+        objectPath(key).addProperty(lastKey(key), scale(value, scale));
+        return this;
+    }
+
+    public SomJson set(String key, boolean value) {
+        objectPath(key).addProperty(lastKey(key), value);
+        return this;
+    }
+
+    public SomJson set(String key, SomJson value) {
         objectPath(key).add(lastKey(key), value.getRoot());
+        return this;
     }
 
     public JsonObject getRoot() {

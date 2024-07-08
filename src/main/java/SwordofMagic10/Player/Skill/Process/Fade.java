@@ -14,9 +14,9 @@ public class Fade extends SomSkill {
 
     @Override
     public String active() {
-        playerData.addEffect(SomEffect.List.Invincible.getEffect());
-        playerData.addEffect(new SomEffect(this, true));
-        SomParticle particle = new SomParticle(Particle.END_ROD).setRandomVector().setSpeed(0.15f);
+        playerData.addEffect(SomEffect.List.Invincible.getEffect(), playerData);
+        playerData.addEffect(new SomEffect(this, true), playerData);
+        SomParticle particle = new SomParticle(Particle.END_ROD, playerData).setRandomVector().setSpeed(0.15f);
         particle.spawn(playerData.getViewers(), playerData.getHipsLocation());
         SomSound.Heal.play(playerData.getViewers(), playerData.getSoundLocation());
         return null;

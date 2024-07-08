@@ -22,7 +22,7 @@ public class MagicBall extends SomSkill {
         if (ray.isHitEntity()) {
             Damage.makeDamage(playerData, ray.getHitEntity(), DamageEffect.None, DamageOrigin.MAT, getDamage());
         }
-        SomParticle particle = new SomParticle(Particle.CRIT_MAGIC);
+        SomParticle particle = new SomParticle(Particle.CRIT_MAGIC, playerData);
         particle.line(playerData.getViewers(), playerData.getHandLocation(), ray.getOriginPosition());
         SomSound.Ball.play(playerData.getViewers(), playerData.getSoundLocation());
         return null;

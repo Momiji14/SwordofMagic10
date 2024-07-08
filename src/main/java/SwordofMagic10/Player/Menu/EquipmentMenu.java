@@ -1,8 +1,9 @@
 package SwordofMagic10.Player.Menu;
 
 import SwordofMagic10.Component.CustomItemStack;
+import SwordofMagic10.Component.SomTask;
 import SwordofMagic10.Entity.EquipSlot;
-import SwordofMagic10.Item.SomEquipment;
+import SwordofMagic10.Item.SomEquip;
 import SwordofMagic10.Item.SomTool;
 import SwordofMagic10.Player.GUIManager;
 import SwordofMagic10.Player.PlayerData;
@@ -34,7 +35,7 @@ public class EquipmentMenu extends GUIManager {
 
     @Override
     public void bottomClick(InventoryClickEvent event) {
-        update();
+        SomTask.delay(this::update, 1);
     }
 
     @Override
@@ -47,11 +48,12 @@ public class EquipmentMenu extends GUIManager {
         clear();
         int slot = 0;
         for (EquipSlot equipSlot : EquipSlot.values()) {
-            SomEquipment equipment = playerData.getEquipment(equipSlot);
-            CustomItemStack item = equipment != null ? equipment.viewItem().setCustomData("EquipSlot", equipSlot.toString()) : new CustomItemStack(Material.BARRIER).setNonDecoDisplay("§c" + equipSlot.getDisplay());
+            SomEquip equipItem = playerData.getEquipment(equipSlot);
+            CustomItemStack item = equipItem != null ? equipItem.viewItem().setCustomData("EquipSlot", equipSlot.toString()) : new CustomItemStack(Material.BARRIER).setNonDecoDisplay("§c" + equipSlot.getDisplay());
             setItem(slot, item);
             slot++;
         }
+
         slot = 18;
         for (SomTool.Type toolType : SomTool.Type.values()) {
             CustomItemStack item = playerData.getGatheringMenu().getToolViewItem(toolType).setCustomData("ToolType", toolType.toString());

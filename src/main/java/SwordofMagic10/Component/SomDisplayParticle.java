@@ -11,16 +11,20 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.UUID;
 
-import static SwordofMagic10.Component.Config.SomParticleMetaAddress;
+import static SwordofMagic10.Component.Config.SomEntityTag;
+import static SwordofMagic10.Component.Config.SomParticleAddress;
 import static SwordofMagic10.Component.Function.randomDouble;
 import static SwordofMagic10.Component.Function.randomDoubleSign;
+import static SwordofMagic10.SomCore.Log;
 
-public abstract class SomDisplayParticle extends CustomTransformation implements Cloneable {
+public abstract class SomDisplayParticle extends CustomTransformation {
 
     private final List<AnimationFlame> animation = new ArrayList<>();
     private final List<BukkitTask> taskList = new ArrayList<>();
     private final List<Display> displayEntity = new ArrayList<>();
+    private final List<SomDisplayParticle> displayChild = new ArrayList<>();
     private Display.Billboard billboard = Display.Billboard.CENTER;
 
     public void addAnimation(AnimationFlame animationFlame) {
@@ -37,17 +41,23 @@ public abstract class SomDisplayParticle extends CustomTransformation implements
         return this;
     }
 
+    public SomDisplayParticle addChild(SomDisplayParticle particle) {
+        displayChild.add(particle);
+        return particle;
+    }
+
     public Display create(Collection<PlayerData> viewers, Location location) {
         Display display = summon(location);
         displayEntity.add(display);
         display.setTransformation(this);
         display.setBillboard(billboard);
         display.setViewRange(256);
-        display.setMetadata(SomParticleMetaAddress, new FixedMetadataValue(SomCore.plugin(), true));
-        if (animation.size() == 0) {
+        display.addScoreboardTag(SomEntityTag);
+        display.setMetadata(SomParticleAddress, new FixedMetadataValue(SomCore.plugin(), viewers));
+        if (animation.isEmpty()) {
             taskList.add(SomTask.syncDelay(display::remove, time()));
         } else {
-            SomTask.delay(() -> {
+            taskList.add(SomTask.delay(() -> {
                 int delay = 0;
                 for (AnimationFlame animationFlame : animation) {
                     if (animationFlame instanceof CustomTransformation flame) {
@@ -60,7 +70,7 @@ public abstract class SomDisplayParticle extends CustomTransformation implements
                     delay += animationFlame.time();
                 }
                 taskList.add(SomTask.syncDelay(display::remove, delay));
-            }, 2);
+            }, 2));
         }
         for (PlayerData playerData : PlayerData.getPlayerList()) {
             if (!viewers.contains(playerData)) {
@@ -72,6 +82,9 @@ public abstract class SomDisplayParticle extends CustomTransformation implements
     }
 
     public void stop() {
+        for (SomDisplayParticle particle : displayChild) {
+            particle.stop();
+        }
         for (BukkitTask bukkitTask : taskList) {
             bukkitTask.cancel();
         }

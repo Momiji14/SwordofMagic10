@@ -26,15 +26,15 @@ public class ProtectionOfGoddess extends SomSkill {
         double damage = getDamage();
         new SomBlockParticle(Material.GOLD_BLOCK).bell(playerData.getViewers(), playerData.getEyeLocation().addY(2), 1);
         SomTask.delay(() -> {
-            SomParticle particle4 = new SomParticle(Color.YELLOW);
-            SomParticle particle5 = new SomParticle(Particle.FIREWORKS_SPARK).setSpeed(0.25f);
+            SomParticle particle4 = new SomParticle(Color.YELLOW, playerData);
+            SomParticle particle5 = new SomParticle(Particle.FIREWORKS_SPARK, playerData).setSpeed(0.25f);
             particle4.circleHeightTwin(playerData.getViewers(), playerData.getLocation(), radius, radius, 10);
             particle5.randomVectorHalf(playerData.getViewers(), playerData.getLocation().addY(4), radius);
+            SomSound.Bell.play(playerData.getViewers(), playerData.getSoundLocation());
             for (SomEntity entity : SomEntity.nearSomEntity(playerData.getTargets(), playerData.getLocation(), radius)) {
                 Damage.makeDamage(playerData, entity, DamageEffect.Holy, DamageOrigin.MAT, damage);
                 SomTask.wait(50);
             }
-            SomSound.Bell.play(playerData.getViewers(), playerData.getSoundLocation());
         }, 10);
         return null;
     }

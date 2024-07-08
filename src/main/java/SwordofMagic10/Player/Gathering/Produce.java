@@ -4,66 +4,130 @@ import SwordofMagic10.Component.*;
 import SwordofMagic10.DataBase.ProduceDataLoader;
 import SwordofMagic10.Item.SomItem;
 import SwordofMagic10.Item.SomItemStack;
+import SwordofMagic10.Item.SomQuality;
 import SwordofMagic10.Item.SomWorker;
 import SwordofMagic10.Player.GUIManager;
 import SwordofMagic10.Player.PlayerData;
 import SwordofMagic10.Player.Shop.RecipeData;
+import org.bukkit.Material;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 import static SwordofMagic10.Component.Function.decoText;
-import static SwordofMagic10.SomCore.Log;
+import static SwordofMagic10.Component.Function.randomDouble;
+
 
 public class Produce extends GUIManager.Bar {
-    public static final int CraftTick = 50;
-    private static final int MaxReserve = 20;
-    private int page = 1;
+    public static CustomItemStack ProduceGameIcon = new CustomItemStack(Material.CRAFTING_TABLE).setDisplay("手動制作").addLore("§a自身でアイテムを製作します").addLore("§a※ミニゲームが開始されます").setCustomData("ProduceGame", true);
+    public static final int CraftTick = 20;
+    private static final int MaxReserve = 18;
+    private int page = 0;
     private final List<Queue> queues = new ArrayList<>();
+    private final HashMap<SomItem.ItemCategory, List<ProduceData>> dataList = new HashMap<>();
+    private SomItem.ItemCategory category;
+    private final ProduceSelect select;
     public Produce(PlayerData playerData) {
         super(playerData, "制作加工", 6);
-        SomTask.timer(this::ProduceTick, 50, CraftTick);
+        select = new ProduceSelect(playerData, this);
+        SomTask.timerPlayer(playerData, () -> {
+            if (playerData.isPlayMode()) {
+                ProduceWorkerTick();
+                if (!playerData.getGatheringMenu().isReserve()) {
+                    playerData.getGatheringMenu().updateWorkerTick();
+                    playerData.getGatheringMenu().updateCraftTick();
+                    playerData.getGatheringMenu().updateChestTick();
+                }
+            }
+        }, 50, CraftTick);
     }
 
-    public void ProduceTick() {
+    public ProduceSelect select() {
+        return select;
+    }
+    private double playerPowerCount = 0;
+    public void ProduceWorkerTick() {
+        int size = 0;
         for (Queue queue : queues) {
+            size++;
             ProduceData produceData = queue.produceData;
-            for (SomWorker worker : playerData.getGatheringMenu().getWorkerList()) {
-                if (worker.getType() == GatheringMenu.Type.Produce) {
-                    double power = 2.5 * (1+worker.getLevel(GatheringMenu.Type.Produce)*0.05);
-                    double percent = power/produceData.getCost();
-                    queue.process += power;
-                    worker.addExp(GatheringMenu.Type.Produce, (int) (produceData.getExp()*percent));
+            double reqProcess =  queue.amount * produceData.getCost();
+            if (playerPowerCount >= 1) {
+                int count = 0;
+                while (playerPowerCount >= 1) {
+                    playerPowerCount -= 1.0;
+                    if (queue.process <= reqProcess) {
+                        count++;
+                    } else break;
+                    queue.process += getPower() * CraftTick/20.0;
+                }
+                if (count > 0) {
+                    if (queue.getProduceData().getItem().getItemCategory() == SomItem.ItemCategory.Potion) {
+                        count *= 2;
+                    }
+                    playerData.getGatheringMenu().addExp(GatheringMenu.Type.Produce, count);
+                }
+            }
+            if (queue.process <= reqProcess) {
+                for (SomWorker worker : playerData.getGatheringMenu().getWorkerList()) {
+                    if (worker.getType() == GatheringMenu.Type.Produce) {
+                        double power = worker.getPower(GatheringMenu.Type.Produce) * CraftTick/20.0;
+                        queue.process += power;
+                        int level = worker.getLevel(GatheringMenu.Type.Produce);
+                        worker.addExp(GatheringMenu.Type.Produce, GatheringMenu.getExp(level)*0.2);
+                        if (queue.process > reqProcess) break;
+                    }
                 }
             }
             int amount = 0;
-            while (queue.process > produceData.getCost()) {
+            while (queue.process >= produceData.getCost()) {
                 queue.amount--;
                 queue.process -= produceData.getCost();
                 amount++;
-            }
-            if (amount > 0) {
-                playerData.getGatheringMenu().getGatheringItem().merge(produceData.getId(), produceData.getAmount() * amount, Integer::sum);
-                playerData.getGatheringMenu().addExp(GatheringMenu.Type.Produce, produceData.getExp() * amount);
-            }
-            if (queue.amount <= 0) {
-                queues.remove(0);
-                if (queues.size() == 0) {
-                    playerData.sendMessage("§aすべての§b制作予約§aが§e完了§aしました\n§e労働者管理§aから§eアイテム§aを§b回収§aしてください", SomSound.Level);
+                if (randomDouble(0, 1) < playerData.getGatheringMenu().overBonus(GatheringMenu.Type.Produce)) amount++;
+                if (queue.amount <= 0) {
+                    playerData.sendSomText(queue.produceData.getItem().toSomText().add("§aの§b制作予約§aが§e完了§aしました"), SomSound.Level);
+                    break;
                 }
             }
-            playerData.getGatheringMenu().updateWorkerTick();
-            playerData.getGatheringMenu().updateCraftTick();
-            playerData.getGatheringMenu().updateChestTick();
+            if (amount > 0) {
+                SomItem item = produceData.getItem().clone();
+                if (item instanceof SomQuality quality) {
+                    int level = playerData.getGatheringMenu().getLevel(GatheringMenu.Type.Produce);
+                    for (SomWorker worker : playerData.getGatheringMenu().getWorkerList()) {
+                        if (worker.getType() == GatheringMenu.Type.Produce) {
+                            level = Math.max(level, worker.getLevel(GatheringMenu.Type.Produce));
+                        }
+                    }
+                    quality.setLevel(level);
+                }
+                playerData.getGatheringMenu().addGatheringItem(item, produceData.getAmount() * amount);
+            }
+            if (queues.size() >= size && playerPowerCount >= 1) continue;
             break;
+        }
+        if (!queues.isEmpty()) {
+            queues.removeIf(queueData -> queueData.amount <= 0);
+            if (queues.isEmpty()) {
+                playerData.sendMessage("§aすべての§b制作予約§aが§e完了§aしました\n§e労働者管理§aから§eアイテム§aを§b回収§aしてください", SomSound.Level);
+            }
+        }
+    }
+    public void ProducePlayerTick(double multiply) {
+        if (!queues.isEmpty()) {
+            playerPowerCount += multiply;
         }
     }
 
+    public double getPower() {
+        return 3 + playerData.getGatheringMenu().getLevel(GatheringMenu.Type.Produce) * 0.15;
+    }
+
+
     public int offset() {
-        return (page-1) * 45;
+        return page * 45;
     }
 
     public void addPage() {
@@ -71,11 +135,11 @@ public class Produce extends GUIManager.Bar {
     }
 
     public int maxPage() {
-        return ProduceDataLoader.getProduceDataList().size()/45;
+        return (int) Math.floor(dataList.get(category).size()/45.0);
     }
 
     public void removePage() {
-        page = Math.max(1, page - 1);
+        page = Math.max(0, page - 1);
     }
 
 
@@ -110,18 +174,30 @@ public class Produce extends GUIManager.Bar {
                 ProduceData produceData = ProduceDataLoader.getProduceData(CustomItemStack.getCustomData(clickedItem,"ProduceDataID"));
                 if (produceData != null) {
                     SomItem item = produceData.getItem();
-                    int buyAmount = amount;
-                    int amount = produceData.getAmount() * buyAmount;
+                    RecipeData recipeData = produceData.getRecipe();
+                    int buyAmount;
+                    if (event.isShiftClick()) {
+                        buyAmount = Integer.MAX_VALUE;
+                        for (SomItemStack stack : recipeData.getRecipeSlot()) {
+                            Optional<SomItemStack> optional = playerData.getItemInventory().getStack(stack.getItem());
+                            if (optional.isPresent()) {
+                                buyAmount = Math.min(optional.get().getAmount() / stack.getAmount(), buyAmount);
+                            }
+                        }
+                        if (buyAmount < 1) buyAmount = 1;
+                    } else {
+                        buyAmount = amount;
+                    }
                     boolean fall = false;
                     List<SomText> message = new ArrayList<>();
                     message.add(SomText.create(decoText("必要リスト")));
-                    RecipeData recipeData = produceData.getRecipe();
                     for (SomItemStack stack : recipeData.getRecipeSlot()) {
-                        SomText itemText = SomText.create("§7・").addText(stack.getItem().toSomText(stack.getAmount()));
-                        if (playerData.getItemInventory().has(stack, buyAmount)) {
-                            message.add(itemText.addText("§a✔"));
+                        SomItem itemData = stack.getItem();
+                        SomText itemText = SomText.create("§7・").add(itemData.toSomText(stack.getAmount() * buyAmount));
+                        if (playerData.getItemInventory().req(stack, buyAmount)) {
+                            message.add(itemText.add("§a✔"));
                         } else {
-                            message.add(itemText.addText("§c✖"));
+                            message.add(itemText.add("§c✖"));
                             fall = true;
                         }
                     }
@@ -130,21 +206,19 @@ public class Produce extends GUIManager.Bar {
                         //message.add(SomText.create().addRunCommand("§e[" + command + "]", "§e" + command, command));
                         playerData.sendSomText(message, SomSound.Nope);
                     } else {
-                        for (SomWorker worker : playerData.getGatheringMenu().getWorkerList()) {
-                            if (worker.getType() == GatheringMenu.Type.Produce) {
-                                if (getQueues().size() < MaxReserve) {
-                                    addQueue(new Queue(produceData, buyAmount));
-                                    for (SomItemStack stack : produceData.getRecipe().getRecipeSlot()) {
-                                        playerData.getItemInventory().remove(stack, amount);
-                                    }
-                                    playerData.sendMessage(item.getColorDisplay() + (amount > 1 ? "§ex" + amount : "") + "§aを§b制作予約§aに§e登録§aしました", SomSound.Tick);
-                                } else {
-                                    playerData.sendMessage("§e制作予約§aは§c最大" + MaxReserve + "個§aまでです", SomSound.Nope);
-                                }
-                                return;
+                        if (getQueues().size() < MaxReserve) {
+                            addQueue(new Queue(produceData, buyAmount));
+                            for (SomItemStack stack : produceData.getRecipe().getRecipeSlot()) {
+                                playerData.getItemInventory().removeReq(stack, buyAmount);
                             }
+                            playerData.sendMessage(item.getColorDisplay() + (buyAmount > 1 ? "§ex" + buyAmount : "") + "§aを§b制作予約§aに§e登録§aしました", SomSound.Tick);
+                            for (SomWorker worker : playerData.getGatheringMenu().getWorkerList()) {
+                                if (worker.getType() == GatheringMenu.Type.Produce) return;
+                            }
+                            playerData.sendMessage("§e制作業務§aを担当している§e労働者§aがいないため§e手動制作§aを行ってください", SomSound.Tick);
+                        } else {
+                            playerData.sendMessage("§e制作予約§aは§c最大" + MaxReserve + "個§aまでです", SomSound.Nope);
                         }
-                        playerData.sendMessage("§e制作業務§aを担当している§e労働者§aがいません", SomSound.Nope);
                     }
                 }
             } else {
@@ -169,16 +243,69 @@ public class Produce extends GUIManager.Bar {
         int offset = offset();
         int slot = 0;
         for (int i = offset; i < offset + 45; i++) {
-            if (getProduceDataList().size() > i) {
-                ProduceData produceData = getProduceData(i);
-                contents[slot] = produceData.viewItem().setCustomData("ProduceDataID", produceData.getId());
+            if (dataList.get(category).size() > i) {
+                ProduceData produceData = dataList.get(category).get(i);
+                contents[slot] = produceData.viewItem().setAmountReturn(produceData.getAmount()).setCustomData("ProduceDataID", produceData.getId());
                 slot++;
             } else break;
         }
         setContents(contents);
-        if (page > 1) setItem(45, Config.DownScrollIcon);
-        if (maxPage() > page) setItem(53, Config.UpScrollIcon);
         updateBar();
+        if (page > 0) setItem(45, Config.DownScrollIcon);
+        if (maxPage() > page) setItem(53, Config.UpScrollIcon);
+    }
+
+    public static class ProduceSelect extends GUIManager {
+
+        private final Produce produce;
+        public ProduceSelect(PlayerData playerData, Produce produce) {
+            super(playerData, "制作カテゴリ", 3);
+            this.produce = produce;
+            List<SomItem.ItemCategory> categories = new ArrayList<>();
+            for (ProduceData produceData : ProduceDataLoader.getProduceDataList()) {
+                SomItem.ItemCategory category = produceData.getItem().getItemCategory();
+                if (!produce.dataList.containsKey(category)) produce.dataList.put(category, new ArrayList<>());
+                produce.dataList.get(category).add(produceData);
+                if (!categories.contains(category)) {
+                    categories.add(category);
+                }
+            }
+            categories.sort(Comparator.comparing(category -> category));
+            int slot = 0;
+            for (SomItem.ItemCategory category : categories) {
+                setItem(slot, category.viewItem());
+                slot++;
+            }
+            setItem(26, ProduceGameIcon);
+        }
+
+        @Override
+        public void topClick(InventoryClickEvent event) {
+            ItemStack clickedItem = event.getCurrentItem();
+            if (clickedItem != null) {
+                if (CustomItemStack.hasCustomData(clickedItem, "Category")) {
+                    produce.category = SomItem.ItemCategory.valueOf(CustomItemStack.getCustomData(clickedItem, "Category"));
+                    produce.open();
+                } else if (CustomItemStack.hasCustomData(clickedItem, "ProduceGame")) {
+                    playerData.getProduceGame().open();
+                }
+            }
+        }
+
+        @Override
+        public void bottomClick(InventoryClickEvent event) {
+
+        }
+
+        @Override
+        public void close(InventoryCloseEvent event) {
+
+        }
+
+        @Override
+        public void update() {
+
+        }
     }
 
     public static class Queue {

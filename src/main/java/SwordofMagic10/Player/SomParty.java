@@ -2,10 +2,9 @@ package SwordofMagic10.Player;
 
 import SwordofMagic10.Component.SomSound;
 import SwordofMagic10.Component.SomTask;
+import SwordofMagic10.Component.SomText;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 public class SomParty {
     private static final HashMap<String, SomParty> partyList = new HashMap<>();
@@ -16,7 +15,7 @@ public class SomParty {
     }
 
     private final String id;
-    private final List<PlayerData> member = new ArrayList<>();
+    private final Set<PlayerData> member = new HashSet<>();
     private PlayerData leader;
 
     public static SomParty create(String id, PlayerData playerData) {
@@ -36,7 +35,7 @@ public class SomParty {
         return id;
     }
 
-    public List<PlayerData> getMember() {
+    public Set<PlayerData> getMember() {
         return member;
     }
 
@@ -57,14 +56,28 @@ public class SomParty {
     public void leavePlayer(PlayerData playerData) {
         member.remove(playerData);
         playerData.setParty(null);
-        if (member.size() == 0) {
+        if (member.isEmpty()) {
             partyList.remove(this.getId());
         } else if (leader == playerData) {
-            setLeader(member.get(0));
+            for (PlayerData data : member) {
+                setLeader(data);
+                break;
+            }
             sendMessage(leader.getDisplayName() + "§aが§eリーダー§aになりました", SomSound.Tick);
         }
         sendMessage(playerData.getDisplayName() + "§aが§eパーティ§aを§c脱退§aしました", SomSound.Tick);
         playerData.sendMessage("§eパーティ§aを§c脱退§aしました", SomSound.Tick);
+    }
+
+    public void kickPlayer(PlayerData playerData) {
+        member.remove(playerData);
+        playerData.setParty(null);
+        if (member.isEmpty()) {
+            partyList.remove(this.getId());
+        } else {
+            sendMessage(playerData.getDisplayName() + "§aが§eパーティ§aから§c追放§aされました", SomSound.Tick);
+            playerData.sendMessage("§eパーティ§aから§c追放§aされました", SomSound.Tick);
+        }
     }
 
     public void invitePlayer(PlayerData sender, PlayerData playerData) {
@@ -72,7 +85,7 @@ public class SomParty {
             if (!playerData.hasParty()) {
                 inviteList.put(playerData, this);
                 sendMessage(sender.getDisplayName() + "§aが§r" + playerData.getDisplayName() + "§aを§eパーティ§aに§e招待§aしました", SomSound.Tick);
-                playerData.sendMessage(sender.getDisplayName() + "§aから§eパーティ§aに§e招待§aされました §e/party accept", SomSound.Tick);
+                playerData.sendSomText(SomText.create(sender.getDisplayName()).add("§aから§eパーティ§aに§e招待§aされました ").addRunCommand("§e/party accept", "§e/party accept", "/party accept") , SomSound.Tick);
                 SomTask.delay(() -> {
                     if (inviteList.containsKey(playerData)) {
                         inviteList.remove(playerData);

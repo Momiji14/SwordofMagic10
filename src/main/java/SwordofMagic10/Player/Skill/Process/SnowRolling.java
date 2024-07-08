@@ -24,7 +24,7 @@ public class SnowRolling extends SomSkill {
         double duration = getDuration();
         double damage = getDamage()/getCount();
         long tick = getDurationTick()/getCount();
-        SomParticle particle = new SomParticle(Particle.END_ROD);
+        SomParticle particle = new SomParticle(Particle.END_ROD, playerData);
         new BukkitRunnable() {
             int timer = 0;
             @Override
@@ -32,7 +32,7 @@ public class SnowRolling extends SomSkill {
                 if (timer < duration*20) {
                     for (SomEntity entity : SomEntity.nearSomEntity(playerData.getTargets(), playerData.getEyeLocation(), radius)) {
                         entity.setVelocity(entity.getLocation().toLocationVector(playerData.getEyeLocation()));
-                        entity.addEffect(SomEffect.List.Freeze.getEffect());
+                        entity.addEffect(SomEffect.List.Freeze.getEffect(), playerData);
                         Damage.makeDamage(playerData, entity, DamageEffect.Ice, DamageOrigin.MAT, damage);
                     }
                     particle.randomLocation(playerData.getViewers(), playerData.getHipsLocation(), 2, 5);

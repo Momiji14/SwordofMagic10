@@ -1,5 +1,8 @@
 package SwordofMagic10.Player.Quest;
 
+import SwordofMagic10.Player.Classes.ClassType;
+import SwordofMagic10.Player.Classes.Classes;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -11,8 +14,11 @@ public class QuestData {
     private Cycle cycle;
     private String handler;
     private int reqLevel = 1;
+    private int maxLevel = Classes.MaxLevel;
     private List<String> reqQuest = new ArrayList<>();
+    private List<ClassType> reqClass = new ArrayList<>();
     private int sortIndex = 0;
+    private int overrideSlot = -1;
     private final List<QuestPhase> phase = new ArrayList<>();
 
     public String getId() {
@@ -63,12 +69,28 @@ public class QuestData {
         this.reqLevel = reqLevel;
     }
 
+    public int getMaxLevel() {
+        return maxLevel;
+    }
+
+    public void setMaxLevel(int maxLevel) {
+        this.maxLevel = maxLevel;
+    }
+
     public List<String> getReqQuest() {
         return reqQuest;
     }
 
     public void setReqQuest(List<String> reqQuest) {
         this.reqQuest = reqQuest;
+    }
+
+    public List<ClassType> getReqClass() {
+        return reqClass;
+    }
+
+    public void setReqClass(List<ClassType> reqClass) {
+        this.reqClass = reqClass;
     }
 
     public int getSortIndex() {
@@ -79,6 +101,14 @@ public class QuestData {
         this.sortIndex = sortIndex;
     }
 
+    public int getOverrideSlot() {
+        return overrideSlot;
+    }
+
+    public void setOverrideSlot(int overrideSlot) {
+        this.overrideSlot = overrideSlot;
+    }
+
     public List<QuestPhase> getPhase() {
         return phase;
     }
@@ -87,10 +117,15 @@ public class QuestData {
         phase.add(questPhase);
     }
 
+    public boolean classCheck(ClassType classType) {
+        return getReqClass().isEmpty() || getReqClass().contains(classType);
+    }
+
     public enum Cycle {
         One("一度のみ"),
-        Day("デイリー"),
+        Daily("デイリー"),
         Weak("ウィークリー"),
+        Many("制限なし"),
         ;
 
         private final String display;

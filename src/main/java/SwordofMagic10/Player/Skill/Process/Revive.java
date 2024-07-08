@@ -14,21 +14,22 @@ public class Revive extends SomSkill {
     }
 
     @Override
-    public boolean cast() {
-        SomParticle particle = new SomParticle(Color.AQUA);
-        particle.circle(playerData.getViewers(), playerData.getLocation(), getRadius());
-        return super.cast();
-    }
-
-    @Override
     public String active() {
-        SomEffect effect = new SomEffect(this, true);
-        SomParticle particle = new SomParticle(Color.AQUA);
-        particle.circleFill(playerData.getViewers(), playerData.getLocation(), getRadius());
-        for (SomEntity ally : playerData.getAllies(getRadius())) {
-            ally.addEffect(effect);
-            particle.circleHeightTwin(playerData.getViewers(), ally.getLivingEntity(), 1, 2, 3);
-            SomSound.Heal.play(ally);
+        SomEffect effect = new SomEffect(this, true).setRank(SomEffect.Rank.High);
+        SomParticle particle = new SomParticle(Color.AQUA, playerData);
+
+        for (SomEntity member : playerData.getMember()){
+            //パーティクル
+            particle.circleHeightTwin(playerData.getViewers(), member.getLivingEntity(), 1, 2, 3);
+            //エフェクト
+            member.addEffect(effect, playerData);
+            //サウンド
+            SomSound.Heal.play(member);
+        }
+
+        //レジェンドレイド中なら
+        if (playerData.getDungeonMenu().isInDungeon() && playerData.getDungeonMenu().getDungeon().isLegendRaid()){
+            playerData.getSkillManager().setCoolTime(this, 12000);
         }
         return null;
     }

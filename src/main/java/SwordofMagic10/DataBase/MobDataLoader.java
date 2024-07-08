@@ -8,6 +8,7 @@ import SwordofMagic10.Entity.StatusType;
 import SwordofMagic10.Item.SomItem;
 import me.libraryaddict.disguise.disguisetypes.*;
 import me.libraryaddict.disguise.disguisetypes.watchers.*;
+import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
@@ -17,6 +18,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Fox;
 import org.bukkit.entity.Horse;
 import org.bukkit.entity.Villager;
+import org.joml.Vector3f;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -25,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import static SwordofMagic10.SomCore.Log;
+import static SwordofMagic10.SomCore.plugin;
 
 public class MobDataLoader {
 
@@ -99,83 +102,100 @@ public class MobDataLoader {
                             }
                             case RABBIT -> {
                                 RabbitWatcher customWatcher = new RabbitWatcher(disguise);
-                                customWatcher.setType(RabbitType.valueOf(data.getString("RabbitType", "WHITE")));
-                                disguise.setWatcher(customWatcher);
-                            }
-                            case FALLING_BLOCK -> {
-                                FallingBlockWatcher customWatcher = new FallingBlockWatcher(disguise);
-                                customWatcher.setBlock(new CustomItemStack(Material.valueOf(data.getString("Block", "STONE"))));
+                                customWatcher.setType(RabbitType.valueOf(data.getString("Disguise.RabbitType", "WHITE")));
                                 disguise.setWatcher(customWatcher);
                             }
                             case ZOMBIE_VILLAGER -> {
                                 ZombieVillagerWatcher customWatcher = new ZombieVillagerWatcher(disguise);
-                                customWatcher.setBiome(Villager.Type.valueOf(data.getString("VillagerType", "PLAINS")));
+                                customWatcher.setBiome(Villager.Type.valueOf(data.getString("Disguise.VillagerType", "PLAINS")));
                                 customWatcher.setProfession(Villager.Profession.valueOf(data.getString("Profession", "ARMORER")));
                                 disguise.setWatcher(customWatcher);
                             }
                         }
-                        FlagWatcher watcher = disguise.getWatcher();
-                        if (data.isSet("Disguise.OffsetY"))
-                            watcher.setYModifier((float) data.getDouble("Disguise.OffsetY"));
-                        if (data.isSet("Disguise.MainHand")) {
-                            String[] split = data.getString("Disguise.MainHand").split(":");
-                            Material material = Material.valueOf(split[0]);
-                            CustomItemStack item = new CustomItemStack(material);
-                            if (split.length == 2) item.setCustomModelData(Integer.parseInt(split[1]));
-                            watcher.setItemInMainHand(item);
-                        }
-                        if (data.isSet("Disguise.OffHand")) {
-                            String[] split = data.getString("Disguise.OffHand").split(":");
-                            Material material = Material.valueOf(split[0]);
-                            CustomItemStack item = new CustomItemStack(material);
-                            if (split.length == 2) item.setCustomModelData(Integer.parseInt(split[1]));
-                            watcher.setItemInOffHand(item);
-                        }
-                        if (data.isSet("Disguise.Head")) {
-                            String[] split = data.getString("Disguise.Head").split(":");
-                            Material material = Material.valueOf(split[0]);
-                            CustomItemStack item = new CustomItemStack(material);
-                            if (split.length == 2) {
-                                String[] color = split[1].split(",");
-                                item.setLeatherArmorColor(Color.fromRGB(Integer.parseInt(color[0]), Integer.parseInt(color[1]), Integer.parseInt(color[2])));
-                            }
-                            watcher.setHelmet(item);
-                        }
-                        if (data.isSet("Disguise.Chest")) {
-                            String[] split = data.getString("Disguise.Chest").split(":");
-                            Material material = Material.valueOf(split[0]);
-                            CustomItemStack item = new CustomItemStack(material);
-                            if (split.length == 2) {
-                                String[] color = split[1].split(",");
-                                item.setLeatherArmorColor(Color.fromRGB(Integer.parseInt(color[0]), Integer.parseInt(color[1]), Integer.parseInt(color[2])));
-                            }
-                            watcher.setChestplate(item);
-                        }
-                        if (data.isSet("Disguise.Legs")) {
-                            String[] split = data.getString("Disguise.Legs").split(":");
-                            Material material = Material.valueOf(split[0]);
-                            CustomItemStack item = new CustomItemStack(material);
-                            if (split.length == 2) {
-                                String[] color = split[1].split(",");
-                                item.setLeatherArmorColor(Color.fromRGB(Integer.parseInt(color[0]), Integer.parseInt(color[1]), Integer.parseInt(color[2])));
-                            }
-                            watcher.setLeggings(item);
-                        }
-                        if (data.isSet("Disguise.Boots")) {
-                            String[] split = data.getString("Disguise.Boots").split(":");
-                            Material material = Material.valueOf(split[0]);
-                            CustomItemStack item = new CustomItemStack(material);
-                            if (split.length == 2) {
-                                String[] color = split[1].split(",");
-                                item.setLeatherArmorColor(Color.fromRGB(Integer.parseInt(color[0]), Integer.parseInt(color[1]), Integer.parseInt(color[2])));
-                            }
-                            watcher.setBoots(item);
-                        }
-                        disguise.setWatcher(watcher);
                         mobData.setDisguise(disguise);
                     } else if (type.isMisc()) {
-                        mobData.setDisguise(new MiscDisguise(type));
+                        MiscDisguise disguise = new MiscDisguise(type);
+                        switch (type) {
+                            case BLOCK_DISPLAY -> {
+                                BlockDisplayWatcher customWatcher = new BlockDisplayWatcher(disguise);
+                                customWatcher.setBlock(Material.valueOf(data.getString("Disguise.Block")).createBlockData());
+                                String[] scale = data.getString("Disguise.Scale", "1.0,1.0,1.0").split(",");
+                                customWatcher.setScale(new Vector3f(Float.parseFloat(scale[0]), Float.parseFloat(scale[1]), Float.parseFloat(scale[2])));
+                                disguise.setWatcher(customWatcher);
+                            }
+                            case FALLING_BLOCK -> {
+                                FallingBlockWatcher customWatcher = new FallingBlockWatcher(disguise);
+                                customWatcher.setBlock(new CustomItemStack(Material.valueOf(data.getString("Disguise.Block", "STONE"))));
+                                disguise.setWatcher(customWatcher);
+                            }
+                        }
+                        mobData.setDisguise(disguise);
                     }
+                    FlagWatcher watcher = mobData.getDisguise().getWatcher();
+                    if (data.isSet("Disguise.OffsetY")) {
+                        watcher.setYModifier((float) data.getDouble("Disguise.OffsetY"));
+                    }
+                    if (data.isSet("Disguise.PitchLock")) {
+                        watcher.setPitchLock((float) data.getDouble("Disguise.PitchLock"));
+                    }
+                    if (data.isSet("Disguise.Glowing")) {
+                        watcher.setGlowing(data.getBoolean("Disguise.Glowing"));
+                    }
+                    if (data.isSet("Disguise.MainHand")) {
+                        String[] split = data.getString("Disguise.MainHand").split(":");
+                        Material material = Material.valueOf(split[0]);
+                        CustomItemStack item = new CustomItemStack(material);
+                        if (split.length == 2) item.setCustomModelData(Integer.parseInt(split[1]));
+                        watcher.setItemInMainHand(item);
+                    }
+                    if (data.isSet("Disguise.OffHand")) {
+                        String[] split = data.getString("Disguise.OffHand").split(":");
+                        Material material = Material.valueOf(split[0]);
+                        CustomItemStack item = new CustomItemStack(material);
+                        if (split.length == 2) item.setCustomModelData(Integer.parseInt(split[1]));
+                        watcher.setItemInOffHand(item);
+                    }
+                    if (data.isSet("Disguise.Head")) {
+                        String[] split = data.getString("Disguise.Head").split(":");
+                        Material material = Material.valueOf(split[0]);
+                        CustomItemStack item = new CustomItemStack(material);
+                        if (split.length == 2) {
+                            String[] color = split[1].split(",");
+                            item.setLeatherArmorColor(Color.fromRGB(Integer.parseInt(color[0]), Integer.parseInt(color[1]), Integer.parseInt(color[2])));
+                        }
+                        watcher.setHelmet(item);
+                    }
+                    if (data.isSet("Disguise.Chest")) {
+                        String[] split = data.getString("Disguise.Chest").split(":");
+                        Material material = Material.valueOf(split[0]);
+                        CustomItemStack item = new CustomItemStack(material);
+                        if (split.length == 2) {
+                            String[] color = split[1].split(",");
+                            item.setLeatherArmorColor(Color.fromRGB(Integer.parseInt(color[0]), Integer.parseInt(color[1]), Integer.parseInt(color[2])));
+                        }
+                        watcher.setChestplate(item);
+                    }
+                    if (data.isSet("Disguise.Legs")) {
+                        String[] split = data.getString("Disguise.Legs").split(":");
+                        Material material = Material.valueOf(split[0]);
+                        CustomItemStack item = new CustomItemStack(material);
+                        if (split.length == 2) {
+                            String[] color = split[1].split(",");
+                            item.setLeatherArmorColor(Color.fromRGB(Integer.parseInt(color[0]), Integer.parseInt(color[1]), Integer.parseInt(color[2])));
+                        }
+                        watcher.setLeggings(item);
+                    }
+                    if (data.isSet("Disguise.Boots")) {
+                        String[] split = data.getString("Disguise.Boots").split(":");
+                        Material material = Material.valueOf(split[0]);
+                        CustomItemStack item = new CustomItemStack(material);
+                        if (split.length == 2) {
+                            String[] color = split[1].split(",");
+                            item.setLeatherArmorColor(Color.fromRGB(Integer.parseInt(color[0]), Integer.parseInt(color[1]), Integer.parseInt(color[2])));
+                        }
+                        watcher.setBoots(item);
+                    }
+                    mobData.getDisguise().setWatcher(watcher);
                 }
                 if (data.isSet("Collision.Size")) mobData.setCollisionSize(data.getDouble("Collision.Size"));
                 if (data.isSet("Collision.SizeY")) mobData.setCollisionSize(data.getDouble("Collision.SizeY"));
@@ -210,6 +230,7 @@ public class MobDataLoader {
                     item.getHowToGet().add(mobData);
                     mobData.getDropDataList().add(drop);
                 }
+                mobData.updateStatus();
                 mobDataList.put(id, mobData);
                 list.add(mobData);
             } catch (Exception e) {

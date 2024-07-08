@@ -19,6 +19,13 @@ public class QuestTalk extends QuestPhase implements Cloneable {
         super(questData);
     }
 
+    @Override
+    public List<String> sidebarLine(PlayerData playerData) {
+        List<String> line = new ArrayList<>();
+        line.add("§7・§e" + handler + "§aを話す");
+        return line;
+    }
+
     public String getHandler() {
         return handler;
     }
@@ -37,7 +44,7 @@ public class QuestTalk extends QuestPhase implements Cloneable {
 
     private boolean talking = false;
     public synchronized void talk(PlayerData playerData) {
-        if (!talking) {
+        if (!talking && !flag) {
             talking = true;
             playerData.sendMessage(decoText(getQuestData().getDisplay()), SomSound.Tick);
             playerData.closeInventory();
@@ -79,16 +86,6 @@ public class QuestTalk extends QuestPhase implements Cloneable {
         return flag;
     }
 
-    @Override
-    public SomJson toJson() {
-        SomJson json = new SomJson();
-        return json;
-    }
-
-    @Override
-    public QuestPhase fromJson(SomJson json) {
-        return clone();
-    }
 
     @Override
     public QuestTalk clone() {

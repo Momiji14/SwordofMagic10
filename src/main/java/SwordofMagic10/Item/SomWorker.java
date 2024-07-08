@@ -1,14 +1,15 @@
 package SwordofMagic10.Item;
 
+import SwordofMagic10.Player.Classes.Classes;
 import SwordofMagic10.Player.Gathering.GatheringMenu;
 
 import java.util.HashMap;
 
-import static SwordofMagic10.Player.Gathering.GatheringMenu.getReqExp;
+import static SwordofMagic10.Player.Classes.Classes.MaxLevel;
 
 public class SomWorker extends SomItem implements Cloneable {
     private HashMap<GatheringMenu.Type, Integer> level = new HashMap<>();
-    private HashMap<GatheringMenu.Type, Integer> exp = new HashMap<>();
+    private HashMap<GatheringMenu.Type, Double> exp = new HashMap<>();
     private GatheringMenu.Type type = GatheringMenu.Type.Produce;
 
     public int getLevel(GatheringMenu.Type type) {
@@ -24,24 +25,28 @@ public class SomWorker extends SomItem implements Cloneable {
         this.level.merge(type, level, Integer::sum);
     }
 
-    public int getExp(GatheringMenu.Type type) {
-        if (!exp.containsKey(type)) exp.put(type, 0);
+    public double getExp(GatheringMenu.Type type) {
+        if (!exp.containsKey(type)) exp.put(type, 0.0);
         return exp.get(type);
     }
 
-    public void setExp(GatheringMenu.Type type, int exp) {
+    public void setExp(GatheringMenu.Type type, double exp) {
         this.exp.put(type, exp);
     }
 
-    public void addExp(GatheringMenu.Type type, int addExp) {
-        int reqExp = getReqExp(getLevel(type));
+    public void addExp(GatheringMenu.Type type, double addExp) {
+        if (getLevel(type) >= MaxLevel) {
+            setExp(type, 0);
+            return;
+        }
+        double reqExp = GatheringMenu.getReqExp(getLevel(type));
         int addLevel = 0;
-        int currentExp = getExp(type);
+        double currentExp = getExp(type);
         currentExp += addExp;
         while (currentExp >= reqExp) {
             currentExp -= reqExp;
             addLevel++;
-            reqExp = getReqExp(getLevel(type) + addLevel);
+            reqExp = GatheringMenu.getReqExp(getLevel(type) + addLevel);
         }
         if (addLevel > 0) {
             addLevel(type, addLevel);
@@ -55,6 +60,10 @@ public class SomWorker extends SomItem implements Cloneable {
 
     public void setType(GatheringMenu.Type type) {
         this.type = type;
+    }
+
+    public double getPower(GatheringMenu.Type type) {
+        return 1+(getLevel(type)-1)*0.05;
     }
 
     @Override

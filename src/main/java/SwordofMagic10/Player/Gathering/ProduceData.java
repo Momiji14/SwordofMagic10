@@ -1,6 +1,7 @@
 package SwordofMagic10.Player.Gathering;
 
 import SwordofMagic10.Component.CustomItemStack;
+import SwordofMagic10.DataBase.ItemDataLoader;
 import SwordofMagic10.Item.SomItem;
 import SwordofMagic10.Item.SomItemStack;
 import SwordofMagic10.Player.Shop.RecipeData;
@@ -17,7 +18,6 @@ ProduceData {
     private SomItem item;
     private int amount;
     private int cost;
-    private int exp = 0;
     private RecipeData recipeData;
 
     public String getId() {
@@ -65,14 +65,6 @@ ProduceData {
         this.cost = cost;
     }
 
-    public int getExp() {
-        return exp;
-    }
-
-    public void setExp(int exp) {
-        this.exp = exp;
-    }
-
     public RecipeData getRecipe() {
         return recipeData;
     }
@@ -84,10 +76,9 @@ ProduceData {
     public CustomItemStack viewItem() {
         CustomItemStack item = this.item.viewItem();
         item.addSeparator("加工情報");
-        item.addLore(decoLore("加工経験値") + exp);
         item.addLore(decoLore("加工コスト") + cost);
         for (SomItemStack stack : getRecipe().getRecipeSlot()) {
-            item.addLore(decoLore(stack.getItem().getDisplay()) + "§ax" + stack.getAmount());
+            item.addLore("§7・" + stack.getItem().getColorTierDisplay() + "§ex" + stack.getAmount());
         }
         return item;
     }

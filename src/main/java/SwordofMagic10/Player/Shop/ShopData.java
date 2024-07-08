@@ -100,7 +100,7 @@ public class ShopData {
             item.addSeparator("販売情報");
             item.addLore(decoLore("販売価格") + mel + "メル");
             if (hasRecipe()) for (SomItemStack stack : getRecipe().getRecipeSlot()) {
-                item.addLore(decoLore(stack.getItem().getDisplay()) + "§ax" + stack.getAmount());
+                item.addLore(decoLore(stack.getItem().getDisplay()) + "§ex" + stack.getAmount());
             }
             return item;
         }

@@ -4,12 +4,12 @@ import SwordofMagic10.Component.SomJson;
 import SwordofMagic10.Component.SomSound;
 import SwordofMagic10.Item.SomItemStack;
 import SwordofMagic10.Player.PlayerData;
+import org.bukkit.entity.EntityType;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static SwordofMagic10.Component.Function.decoLore;
-import static SwordofMagic10.Component.Function.decoText;
+import static SwordofMagic10.Component.Function.*;
 
 public abstract class QuestPhase implements Cloneable {
 
@@ -19,7 +19,7 @@ public abstract class QuestPhase implements Cloneable {
     private Type type;
     protected boolean flag;
 
-    private int classExp = 0;
+    private double classExp = 0;
     private int equipmentExp = 0;
     private int mel = 0;
     private final List<SomItemStack> itemList = new ArrayList<>();
@@ -60,11 +60,11 @@ public abstract class QuestPhase implements Cloneable {
         this.type = type;
     }
 
-    public int getClassExp() {
+    public double getClassExp() {
         return classExp;
     }
 
-    public void setClassExp(int classExp) {
+    public void setClassExp(double classExp) {
         this.classExp = classExp;
     }
 
@@ -92,11 +92,17 @@ public abstract class QuestPhase implements Cloneable {
         itemList.add(stack);
     }
 
+    public abstract List<String> sidebarLine(PlayerData playerData);
+
+    public boolean hasReward() {
+        return classExp > 0 || equipmentExp > 0 || mel > 0 || !getItemList().isEmpty();
+    }
+
     public void giveReward(PlayerData playerData) {
         List<String> message = new ArrayList<>();
         message.add(decoText(getDisplay()));
         if (getClassExp() > 0) {
-            message.add(decoLore("クラス経験値") + getClassExp());
+            message.add(decoLore("クラス経験値") + scale(getClassExp(), -1));
             playerData.getClasses().addExp(getClassExp());
         }
         if (getEquipmentExp() > 0) {
@@ -107,10 +113,10 @@ public abstract class QuestPhase implements Cloneable {
             message.add(decoLore("メル") + getMel());
             playerData.addMel(getMel());
         }
-        if (getItemList().size() > 0) {
+        if (!getItemList().isEmpty()) {
             for (SomItemStack stack : getItemList()) {
-                message.add("§7・§r" + stack.getItem().getColorDisplay() + "§ax" + stack.getAmount());
-                playerData.getItemInventory().add(stack);
+                message.add("§7・§r" + stack.getItem().getColorDisplay() + "§ex" + stack.getAmount());
+                playerData.getItemInventory().add(stack.getItem().clone(), stack.getAmount());
             }
         }
         playerData.sendMessage(message, SomSound.Tick);
@@ -118,8 +124,41 @@ public abstract class QuestPhase implements Cloneable {
 
     public abstract boolean isProcess(PlayerData playerData);
 
-    public abstract SomJson toJson();
-    public abstract QuestPhase fromJson(SomJson json);
+    public SomJson toJson() {
+        SomJson json = new SomJson();
+        if (this instanceof QuestDungeonClear clear) {
+            json.set("Count", clear.getCount());
+        } else if (this instanceof QuestEnemyKill enemyKill) {
+            enemyKill.getCount().forEach(json::set);
+        } else if (this instanceof QuestHunting hunting) {
+            hunting.getCount().forEach((entityType, count) -> json.set(entityType.toString(), count));
+        }
+        return json;
+    }
+    public QuestPhase fromJson(SomJson json) {
+        switch (type) {
+            case DungeonClear -> {
+                QuestDungeonClear questDungeonClear = (QuestDungeonClear) clone();
+                questDungeonClear.setCount(json.getInt("Count", 0));
+                return questDungeonClear;
+            }
+            case EnemyKill -> {
+                QuestEnemyKill questEnemyKill = (QuestEnemyKill) clone();
+                for (String id : questEnemyKill.getQuestCount().keySet()) {
+                    questEnemyKill.setCount(id, json.getInt(id, 0));
+                }
+                return questEnemyKill;
+            }
+            case Hunting -> {
+                QuestHunting questHunting = (QuestHunting) clone();
+                for (EntityType entityType : questHunting.getQuestCount().keySet()) {
+                    questHunting.setCount(entityType, json.getInt(entityType.toString(), 0));
+                }
+                return questHunting;
+            }
+        }
+        return clone();
+    }
 
     @Override
     public QuestPhase clone() {
@@ -132,9 +171,11 @@ public abstract class QuestPhase implements Cloneable {
 
     public enum Type {
         PassItem,
+        ShowItem,
         Location,
         DungeonClear,
         EnemyKill,
+        Hunting,
         Talk,
         Special,
     }

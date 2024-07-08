@@ -13,14 +13,9 @@ public class RestInPeace extends SomSkill {
         super(playerData);
     }
 
-    private boolean trigger = false;
     @Override
-    public boolean cast() {
-        if (!trigger) {
-            trigger = true;
-            SomSound.Tick.play(playerData.getViewers(), playerData.getSoundLocation());
-        }
-        return super.cast();
+    public void castFirstTick() {
+        SomSound.Tick.play(playerData.getViewers(), playerData.getSoundLocation());
     }
 
     @Override
@@ -28,14 +23,18 @@ public class RestInPeace extends SomSkill {
         double count = getCount();
         double damage = getDamage() / count;
         double headDamage = getHeadDamage() / count;
+
         SomTask.run(() -> {
+            SomRay ray = SomRay.rayLocationEntity(playerData, getReach(), 0.2, playerData.getTargets(), false);
+
             for (int i = 0; i < count; i++) {
-                SomRay ray = SomRay.rayLocationEntity(playerData, getReach(), 0.1, playerData.getTargets(), false);
-                BulletBit.Process(playerData, ray.getHitEntity(), ray, damage, headDamage, new SomParticle(Particle.CRIT));
-                SomTask.wait(100);
+                if (!ray.isHitEntity()){
+                    ray = SomRay.rayLocationEntity(playerData, getReach(), 0.2, playerData.getTargets(), false);
+                }
+                BulletBit.Process(playerData, ray.getHitEntity(), ray, damage, headDamage, new SomParticle(Particle.CRIT, playerData));
+                SomTask.wait(50);
             }
         });
-        trigger = false;
         return null;
     }
 }

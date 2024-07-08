@@ -1,19 +1,20 @@
 package SwordofMagic10.Player.Classes;
 
-import SwordofMagic10.Component.Config;
-import SwordofMagic10.Component.CustomItemStack;
-import SwordofMagic10.Component.Function;
-import SwordofMagic10.Component.SomSound;
+import SwordofMagic10.Component.*;
 import SwordofMagic10.DataBase.ItemDataLoader;
 import SwordofMagic10.DataBase.SkillGroupLoader;
 import SwordofMagic10.Entity.EquipSlot;
 import SwordofMagic10.Item.SomEquipment;
+import SwordofMagic10.Item.SomItem;
 import SwordofMagic10.Item.SomItemStack;
+import SwordofMagic10.Item.SomPotion;
 import SwordofMagic10.Player.GUIManager;
+import SwordofMagic10.Player.Menu.PalletMenu;
 import SwordofMagic10.Player.PlayerData;
 import SwordofMagic10.Player.Skill.SkillData;
 import SwordofMagic10.Player.Skill.SkillGroup;
 import SwordofMagic10.Player.Skill.SomSkill;
+import com.github.jasync.sql.db.RowData;
 import org.bukkit.Material;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -23,30 +24,50 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import static SwordofMagic10.Component.Function.scale;
+import static SwordofMagic10.SomCore.Log;
+
 public class Classes extends GUIManager {
 
-    public final static int MaxLevel = 50;
+    public final static int MaxLevel = 110;
     public final static int[] UnlockSkillGroupSlot = {1, 5, 15, 30};
-    private final static int[] ReqExp = new int[MaxLevel];
+    private final static double[] ReqExp = new double[MaxLevel];
+    private final static double[] Exp = new double[MaxLevel];
 
     static {
         ReqExp[0] = 1000;
         for (int i = 1; i < ReqExp.length; i++) {
-            ReqExp[i] = (int) Math.ceil(ReqExp[i-1] * 1.2);
+            double multiply = 1.15;
+            if (i >= 50) multiply = 1.05;
+            if (i == 98) multiply = 10;
+            if (i > 98) multiply = 2;
+            ReqExp[i] = ReqExp[i-1] * multiply;
+        }
+
+        Exp[0] = 1000;
+        for (int i = 1; i < Exp.length; i++) {
+            double multiply = 1.15;
+            if (i >= 50) multiply = 1.05;
+            Exp[i] = Exp[i-1] * multiply;
         }
     }
 
-    public static int getReqExp(int level) {
-        if (MaxLevel <= level) {
-            return Integer.MAX_VALUE;
-        }
+    public static double getReqExp(int level) {
+        if (level < 1) level = 1;
+        if (MaxLevel <= level) return 0;
         return ReqExp[level - 1];
+    }
+
+    public static double getExp(int level) {
+        if (level < 1) level = 1;
+        if (MaxLevel <= level) return 0;
+        return Exp[level - 1] / (5+Math.pow(level, 1.1));
     }
 
     private final PlayerData playerData;
     private ClassType mainClass;
     private final HashMap<ClassType, Integer> level = new HashMap<>();
-    private final HashMap<ClassType, Integer> exp = new HashMap<>();
+    private final HashMap<ClassType, Double> exp = new HashMap<>();
     private final HashMap<ClassType, List<SkillGroup>> skillGroup = new HashMap<>();
 
     public Classes(PlayerData playerData) {
@@ -66,27 +87,44 @@ public class Classes extends GUIManager {
         this.mainClass = mainClass;
     }
 
-    public int getExp(ClassType classType) {
-        return exp.getOrDefault(classType, 0);
+    public boolean isValidClass() {
+        return mainClass != null;
     }
 
-    public void setExp(ClassType classType, int exp) {
+    public boolean isNullClass() {
+        return mainClass == null;
+    }
+
+    public double getExp(ClassType classType) {
+        return exp.getOrDefault(classType, 0.0);
+    }
+
+    public void setExp(ClassType classType, double exp) {
         this.exp.put(classType, exp);
     }
 
-    public void addExp(int addExp) {
+    public void addExp(double addExp) {
         addExp(mainClass, addExp);
     }
 
-    public void addExp(ClassType classType, int addExp) {
-        int reqExp = getReqExp(getLevel(classType));
+    public void addExp(ClassType classType, double addExp) {
+        if (getLevel(classType) >= MaxLevel) {
+            setExp(classType, 0);
+            return;
+        }
+        double reqExp = getReqExp(getLevel(classType));
         int addLevel = 0;
-        int currentExp = getExp(classType);
+        double currentExp = getExp(classType);
         currentExp += addExp;
         while (currentExp >= reqExp) {
             currentExp -= reqExp;
             addLevel++;
-            reqExp = getReqExp(getLevel(classType) + addLevel);
+            int nextLevel = getLevel(classType) + addLevel;
+            if (MaxLevel > nextLevel) {
+                reqExp = getReqExp(nextLevel);
+            } else {
+                reqExp = Double.MAX_VALUE;
+            }
         }
         if (addLevel > 0) {
             addLevel(classType, addLevel);
@@ -94,12 +132,13 @@ public class Classes extends GUIManager {
         setExp(classType, currentExp);
 
         if (playerData.getSetting().isExpLog()) {
-            playerData.sendMessage("§a[EXP+]" + mainClass.getColorDisplay() + " §e+" + addExp);
+            playerData.sendMessage("§a[ExpLog]" + mainClass.getColorDisplay() + " §e+" + scale(addExp, 2));
         }
     }
 
     public float getExpPercent(ClassType classType) {
-        return (float) getExp(classType) / Classes.getReqExp(getLevel(classType));
+        if (getLevel(classType) >= MaxLevel) return 0f;
+        return (float) (getExp(classType) / Classes.getReqExp(getLevel(classType)));
     }
 
     public int getLevel(ClassType classType) {
@@ -114,6 +153,7 @@ public class Classes extends GUIManager {
         int currentLevel = getLevel(classType);
         setLevel(classType, Function.MinMax(currentLevel + addLevel, 1, MaxLevel));
         playerData.updateStatus();
+        playerData.sendMessage(classType.getColorDisplay() + "§aが§eLv" + getLevel(classType) + "§aに上がりました", SomSound.Level);
     }
 
     public List<SkillGroup> getSkillGroup() {
@@ -174,34 +214,37 @@ public class Classes extends GUIManager {
                     applyClassWeapon(classType);
                     SomSound.Level.play(playerData);
                     playerData.closeInventory();
+                    playerData.updateStatus();
                 } else {
                     playerData.sendMessage("§a現在の§eクラス§aです", SomSound.Nope);
                 }
             }
-            if (CustomItemStack.hasCustomData(clickedItem, "EditSkillGroup")) {
-                editSkillGroup = ClassType.valueOf(CustomItemStack.getCustomData(clickedItem, "EditSkillGroup"));
-                update();
-            }
-            if (CustomItemStack.hasCustomData(clickedItem, "SkillGroup")) {
-                SkillGroup group = SkillGroupLoader.getSkillGroup(CustomItemStack.getCustomData(clickedItem, "SkillGroup"));
-                int activeSlot = activeSkillGroupSlot(editSkillGroup);
-                int groupSize = getSkillGroup(editSkillGroup).size();
-                if (getSkillGroup(editSkillGroup).contains(group)) {
-                    if (group != editSkillGroup.getDefaultSkillGroup()) {
-                        getSkillGroup(editSkillGroup).remove(group);
-                        playerData.sendMessage("§b" + group.getDisplay() + "§aを外しました §e[" + (groupSize-1) + "/"+ activeSlot + "]", SomSound.Tick);
-                    } else {
-                        playerData.sendMessage("§e標準スキルグループ§aは外せません", SomSound.Nope);
-                    }
-                } else {
-                    if (activeSlot > groupSize) {
-                        getSkillGroup(editSkillGroup).add(group);
-                        playerData.sendMessage("§b" + group.getDisplay() + "§aを§bセット§aしました §e[" + (groupSize+1) + "/"+ activeSlot + "]", SomSound.Tick);
-                    } else {
-                        playerData.sendMessage("§eスキルグループスロット§aに§c空§aがありません §c[" + groupSize + "/"+ activeSlot + "]", SomSound.Nope);
-                    }
+            if (mainClass != null) {
+                if (CustomItemStack.hasCustomData(clickedItem, "EditSkillGroup")) {
+                    editSkillGroup = ClassType.valueOf(CustomItemStack.getCustomData(clickedItem, "EditSkillGroup"));
+                    update();
                 }
-                update();
+                if (CustomItemStack.hasCustomData(clickedItem, "SkillGroup")) {
+                    SkillGroup group = SkillGroupLoader.getSkillGroup(CustomItemStack.getCustomData(clickedItem, "SkillGroup"));
+                    int activeSlot = activeSkillGroupSlot(editSkillGroup);
+                    int groupSize = getSkillGroup(editSkillGroup).size();
+                    if (getSkillGroup(editSkillGroup).contains(group)) {
+                        if (group != editSkillGroup.getDefaultSkillGroup()) {
+                            getSkillGroup(editSkillGroup).remove(group);
+                            playerData.sendMessage("§b" + group.getDisplay() + "§aを外しました §e[" + (groupSize - 1) + "/" + activeSlot + "]", SomSound.Tick);
+                        } else {
+                            playerData.sendMessage("§e標準スキルグループ§aは外せません", SomSound.Nope);
+                        }
+                    } else {
+                        if (activeSlot > groupSize) {
+                            getSkillGroup(editSkillGroup).add(group);
+                            playerData.sendMessage("§b" + group.getDisplay() + "§aを§bセット§aしました §e[" + (groupSize + 1) + "/" + activeSlot + "]", SomSound.Tick);
+                        } else {
+                            playerData.sendMessage("§eスキルグループスロット§aに§c空§aがありません §c[" + groupSize + "/" + activeSlot + "]", SomSound.Nope);
+                        }
+                    }
+                    update();
+                }
             }
         }
     }
@@ -213,6 +256,7 @@ public class Classes extends GUIManager {
 
     @Override
     public void close(InventoryCloseEvent event) {
+        playerData.clearEffectNonPotion();
         editSkillGroup = null;
     }
 
@@ -223,7 +267,7 @@ public class Classes extends GUIManager {
         int slot = 0;
         if (editSkillGroup != null) {
             for (SkillGroup group : editSkillGroup.getSkillGroups()) {
-                if (editSkillGroup.getDefaultSkillGroup() != group) {
+                if (editSkillGroup.getDefaultSkillGroup() != group && !group.isHide()) {
                     CustomItemStack item = group.viewItem().setCustomData("SkillGroup", group.getId());
                     if (getSkillGroup(editSkillGroup).contains(group)) item.setGlowing();
                     setItem(slot, item);
@@ -237,7 +281,7 @@ public class Classes extends GUIManager {
                 item.addLore(classType.getLore());
                 if (classType == getMainClass()) item.setGlowing();
                 setItem(slot, item.setCustomData("ClassSelect", classType.toString()));
-                if (getMainClass() != null) {
+                if (isValidClass()) {
                     setItem(slot + 1, Config.FlameItem);
                     setItem(slot + 8, new CustomItemStack(Material.CRAFTING_TABLE).setNonDecoDisplay("§eスキルグループ変更").setCustomData("EditSkillGroup", classType.toString()));
                     int use = 0;
@@ -246,7 +290,13 @@ public class Classes extends GUIManager {
                         use++;
                     }
                     for (int i = use; i < UnlockSkillGroupSlot.length; i++) {
-                        setItem(slot + i + 2, new CustomItemStack(Material.BARRIER).setNonDecoDisplay("§c未使用スロット [Lv" + UnlockSkillGroupSlot[i] + "]"));
+                        CustomItemStack slotView;
+                        if (UnlockSkillGroupSlot[i] > getLevel(classType)) {
+                            slotView = new CustomItemStack(Material.BARRIER).setNonDecoDisplay("§c未開放スロット [Lv" + UnlockSkillGroupSlot[i] + "]");
+                        } else {
+                            slotView = new CustomItemStack(Material.NETHER_STAR).setNonDecoDisplay("§7未使用スロット [Lv" + UnlockSkillGroupSlot[i] + "]");
+                        }
+                        setItem(slot + i + 2, slotView.setCustomData("EditSkillGroup", classType.toString()));
                     }
                 }
                 slot += 9;
@@ -268,5 +318,76 @@ public class Classes extends GUIManager {
         playerData.getItemInventory().add(weapon, 1);
         playerData.sendMessage("§eクラス武器§aが§b支給§aされました", SomSound.Level);
         return false;
+    }
+
+    public static final String Table = "PlayerClasses";
+    private static final String[] priKey = new String[]{"UUID", "Class"};
+    public void save() {
+        for (ClassType classType : ClassType.values()) {
+            String[] priValue = new String[]{playerData.getUUIDAsString(), classType.toString()};
+            SomSQL.setSql(Classes.Table, priKey, priValue, "Username", playerData.getUsername());
+            SomSQL.setSql(Classes.Table, priKey, priValue, "Level", getLevel(classType));
+            SomSQL.setSql(Classes.Table, priKey, priValue, "Exp", getExp(classType));
+
+            SomJson skillGroup = new SomJson();
+            for (int i = 1; i < getSkillGroup(classType).size(); i++) {
+                skillGroup.set("SkillGroup.Slot-" + i, getSkillGroup(classType).get(i).getId());
+            }
+            SomSQL.setSql(Classes.Table, priKey, priValue, "SkillGroup", skillGroup.toString());
+
+            SomJson pallet = new SomJson();
+            PalletMenu palletMenu = playerData.getPalletMenu();
+            for (int i = 0; i < palletMenu.getPallet(classType).length; i++) {
+                SomSkill skill = palletMenu.getPallet(classType)[i];
+                if (skill != null) pallet.set("Skill-" + i, skill.getId());
+            }
+            for (int i = 0; i < palletMenu.getItemPallet().length; i++) {
+                SomItem item = palletMenu.getItemPallet()[i];
+                if (item != null) pallet.set("Item-" + i, item.toJson());
+            }
+            SomSQL.setSql(Classes.Table, priKey, priValue, "Pallet", pallet.toString());
+        }
+    }
+
+    public void load() {
+        for (ClassType classType : ClassType.values()) {
+            String[] priValue = new String[]{playerData.getUUIDAsString(), classType.toString()};
+            setLevel(classType, SomSQL.getInt(Classes.Table, priKey, priValue, "Level"));
+            setExp(classType, SomSQL.getDouble(Classes.Table, priKey, priValue, "Exp"));
+
+            SomJson skillGroup = new SomJson(SomSQL.getString(Classes.Table, priKey, priValue, "SkillGroup"));
+            SkillGroup first = getSkillGroup(classType).get(0);
+            getSkillGroup(classType).clear();
+            getSkillGroup(classType).add(first);
+            for (int i = 1; i < Classes.UnlockSkillGroupSlot.length; i++) {
+                try {
+                    String key = "SkillGroup.Slot-" + i;
+                    if (skillGroup.has(key)) {
+                        getSkillGroup(classType).add(SkillGroupLoader.getSkillGroup(skillGroup.getString(key)));
+                    }
+                } catch (Exception ignore) {}
+            }
+
+            try {
+                SomJson pallet = new SomJson(SomSQL.getString(Classes.Table, priKey, priValue, "Pallet"));
+                PalletMenu palletMenu = playerData.getPalletMenu();
+                for (int i = 0; i < palletMenu.getPallet(classType).length; i++) {
+                    try {
+                        String key = "Skill-" + i;
+                        if (pallet.has(key)) {
+                            palletMenu.setPallet(classType, i, playerData.getSkillManager().getSkill(pallet.getString(key)));
+                        }
+                    } catch (Exception ignore) {}
+                }
+                for (int i = 0; i < palletMenu.getItemPallet().length; i++) {
+                    try {
+                        String key = "Item-" + i;
+                        if (pallet.has(key)) {
+                            palletMenu.setItemPallet(i, (SomPotion) SomItem.fromJson(pallet.getSomJson(key)));
+                        }
+                    } catch (Exception ignore) {}
+                }
+            } catch (Exception ignore) {}
+        }
     }
 }

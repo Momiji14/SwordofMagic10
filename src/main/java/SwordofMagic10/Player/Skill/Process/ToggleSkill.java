@@ -21,7 +21,7 @@ public class ToggleSkill extends SomSkill {
         if (playerData.hasEffect(effect)) {
             playerData.removeEffect(effect);
         } else {
-            playerData.addEffect(effect);
+            playerData.addEffect(effect, playerData);
         }
     }
 }

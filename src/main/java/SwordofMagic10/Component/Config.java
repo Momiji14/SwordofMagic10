@@ -1,5 +1,6 @@
 package SwordofMagic10.Component;
 
+import SwordofMagic10.Player.PlayerData;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 
@@ -10,10 +11,15 @@ public interface Config {
     String ServiceStart = "2023/06/11 00:00:00";
     DateTimeFormatter DateFormat = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
     String EnemyMetaAddress = "SomEnemy";
-    String SomParticleMetaAddress = "SomParticle";
+    String PetMetaAddress = "SomPet";
+    String SomEntityTag = "SomEntity";
+    String SomParticleAddress = "SomParticle";
     File DataBase = new File("../DataBase");
     ItemStack AirItem = new ItemStack(Material.AIR);
     CustomItemStack FlameItem = new CustomItemStack(Material.IRON_BARS).setNonDecoDisplay(" ");
+    static CustomItemStack FlameItem(PlayerData playerData) {
+        return playerData.isBE() ? Config.FlameItem : new CustomItemStack(Material.BLACK_STAINED_GLASS_PANE).setNonDecoDisplay(" ");
+    }
     CustomItemStack UpScrollIcon = new CustomItemStack(Material.ITEM_FRAME).setNonDecoDisplay("§e上にスクロール");
     CustomItemStack DownScrollIcon = new CustomItemStack(Material.ITEM_FRAME).setNonDecoDisplay("§e下にスクロール");
     CustomItemStack UserMenuIcon = new CustomItemStack(Material.BOOK).setNonDecoDisplay("§eユーザーメニュー");
@@ -48,6 +54,17 @@ public interface Config {
             case 10 -> text = "★★";
         }
         return text;
+    }
+
+    static double AdjustExp(PlayerData playerData, int level) {
+        double multiply = 1;
+        if (playerData.getRawLevel() >= 60) {
+            if (playerData.getRawLevel() >= level+5) {
+                int reduce = playerData.getRawLevel() - level;
+                multiply /= (Math.pow(1.2, reduce));
+            }
+        }
+        return multiply;
     }
 
     static boolean isRightSlot(int slot) {

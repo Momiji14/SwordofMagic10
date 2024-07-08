@@ -15,9 +15,9 @@ public class ShadowPool extends SomSkill {
 
     @Override
     public String active() {
-        playerData.addEffect(new SomEffect(this, true));
+        playerData.addEffect(new SomEffect(this, true).setInvincible(true).setRank(SomEffect.Rank.High), playerData);
         playerData.setInvisibility(getDurationTick());
-        SomParticle particle = new SomParticle(Color.BLACK);
+        SomParticle particle = new SomParticle(Color.BLACK, playerData);
         particle.randomLocation(playerData.getViewers(), playerData.getHipsLocation(), 1, 10);
         SomSound.Heal.play(playerData.getViewers(), playerData.getSoundLocation());
         return null;

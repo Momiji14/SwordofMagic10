@@ -1,5 +1,7 @@
 package SwordofMagic10.Component;
 
+import SwordofMagic10.Entity.Enemy.EnemyData;
+import SwordofMagic10.Entity.SomEntity;
 import SwordofMagic10.Player.PlayerData;
 import org.bukkit.Color;
 import org.bukkit.Location;
@@ -21,6 +23,7 @@ public class SomParticle {
     public static final Vector VectorDown = new Vector(0, -1, 0);
     private Particle particle;
     private Particle.DustOptions options;
+    private final SomEntity owner;
     private Vector vector = new Vector();
     private float speed = 0f;
     private double time = 0d;
@@ -28,15 +31,15 @@ public class SomParticle {
     private boolean stop = false;
     private final Random random = new Random();
 
-    public SomParticle() {}
-
-    public SomParticle(Particle particle) {
+    public SomParticle(Particle particle, SomEntity owner) {
         this.particle = particle;
+        this.owner = owner;
     }
 
-    public SomParticle(Color color) {
+    public SomParticle(Color color, SomEntity owner) {
         this.particle = Particle.REDSTONE;
         options = new Particle.DustOptions(color, 1);
+        this.owner = owner;
     }
 
     public void setParticle(Particle particle) {
@@ -106,8 +109,9 @@ public class SomParticle {
         return time;
     }
 
-    public void setTime(double time) {
+    public SomParticle setTime(double time) {
         this.time = time;
+        return this;
     }
 
     public SomParticle setAmount(int amount) {
@@ -144,9 +148,28 @@ public class SomParticle {
     public void spawn(Collection<PlayerData> viewers, Location location) {
         try {
             for (PlayerData playerData : viewers) {
-                if (playerData.getLocation().distance(location) < 64) {
-                    int particleDensity = playerData.getSetting().getParticleDensity();
+                if (playerData.getLocation().distance(location) < Math.min(96, playerData.getPlayer().getViewDistance()*16)) {
+                    int particleDensity;
+                    if (owner == playerData) {
+                        particleDensity = playerData.getSetting().getParticleDensity();
+                    } else if (owner instanceof PlayerData) {
+                        particleDensity = playerData.getSetting().getParticleDensityOther();
+                    } else if (owner instanceof EnemyData) {
+                        particleDensity = playerData.getSetting().getParticleDensityEnemy();
+                    } else {
+                        particleDensity = 100;
+                    }
                     if (!playerData.isAFK() && particleDensity != 0) {
+                        Particle particle = this.particle;
+                        Particle.DustOptions options = this.options;
+                        if (playerData.isBE()) {
+                            switch (particle) {
+                                case FIREWORKS_SPARK -> {
+                                    particle = Particle.REDSTONE;
+                                    options = new Particle.DustOptions(Color.WHITE, 1);
+                                }
+                            }
+                        }
                         boolean viewParticle = true;
                         if (particleDensity != 100) {
                             int density = particleDensityCache.getOrDefault(playerData, 0) + particleDensity;
@@ -180,7 +203,7 @@ public class SomParticle {
     }
 
     public boolean sphere(Collection<PlayerData> viewers, Location location, double radius) {
-        return sphere(viewers, location, radius, radius*36);
+        return sphere(viewers, location, radius, radius*24);
     }
 
     public boolean sphere(Collection<PlayerData> viewers, Location location, double radius, double density) {
@@ -422,7 +445,10 @@ public class SomParticle {
         Location loc = location.clone();
         for (double i = 0; i < distance; i += density) {
             Location locWidth = loc.clone();
-            if (width > 0) locWidth.add(Vector.getRandom().multiply(width*(random.nextDouble()-0.5)));
+            if (width > 0){
+                Vector randomVector =  new Vector(width*(random.nextDouble()-0.5), width*(random.nextDouble()-0.5), width*(random.nextDouble()-0.5));
+                locWidth.add(Vector.getRandom().multiply(randomVector));
+            }
             spawn(viewers, locWidth);
             loc.add(vector);
             if (time > 0) SomTask.wait(wait);
@@ -535,7 +561,7 @@ public class SomParticle {
         cloneLocation.setYaw((float) (cloneLocation.getYaw() - angle/2));
         for (double i = 0; i < angle; i += multiply) {
             cloneLocation.setYaw((float) (cloneLocation.getYaw() + multiply));
-            line(viewers, location, length, 0, density);
+            line(viewers, cloneLocation, length, 0, density);
         }
     }
 

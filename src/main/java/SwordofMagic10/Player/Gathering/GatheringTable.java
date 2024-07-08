@@ -3,31 +3,47 @@ package SwordofMagic10.Player.Gathering;
 import SwordofMagic10.Item.SomItem;
 import SwordofMagic10.Item.SomTool;
 import SwordofMagic10.Item.SomWorker;
+import SwordofMagic10.Player.Classes.Classes;
 import SwordofMagic10.Player.PlayerData;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static SwordofMagic10.Component.Function.randomDouble;
+import static SwordofMagic10.Component.Function.scale;
+import static SwordofMagic10.Player.Gathering.GatheringMenu.GatheringTime;
 
 public record GatheringTable(SomItem item, double percent) {
-    public static void gathering(PlayerData playerData, GatheringMenu.Type type, List<GatheringTable> tableList, int addExp, SomTool tool) {
-        int exp = 0;
-        for (GatheringTable table : tableList) {
-            int amount = give(table, tool.getPower() * (1 + tool.getMultiply(table.item().getId())));
-            exp += addExp * amount;
-            if (amount > 0) playerData.getItemInventory().add(table.item(), amount);
+    public static final double AdjustPower = 0.2;
+    public static void gathering(PlayerData playerData, GatheringMenu.Type type, List<GatheringTable> tableList, SomTool tool) {
+        double multiply = 1;
+        switch (type) {
+            case Mining -> multiply = 7;
+            case Lumber -> multiply = 5;
+            case Collect -> multiply = 3;
+            case Fishing -> multiply = 20 + (Math.max(0, tool.getPlus()-10) * 0.5);
+            case Hunting -> multiply = 8;
         }
-        playerData.getGatheringMenu().addExp(type, exp);
+        multiply *= 1 + playerData.getGatheringMenu().overBonus(type);
+        int level = playerData.getGatheringMenu().getLevel(type);
+        for (GatheringTable table : tableList) {
+            double power = (1 + (tool.getPower() * 0.1) + (level * 0.01)) * tool.getMultiply(table.item().getId()) * multiply * AdjustPower;
+            int amount = give(table, power);
+            if (amount > 0) {
+                playerData.getItemInventory().add(table.item(), amount, table.percent()*power);
+            }
+        }
+        playerData.getGatheringMenu().addExp(type, multiply);
+        tool.addExp((int) ((1+tool.getPower()*0.5)*multiply));
     }
 
-    public static void gathering(PlayerData playerData, GatheringMenu.Type type, List<GatheringTable> tableList, int addExp, SomWorker worker) {
-        int exp = 0;
+    public static void gathering(PlayerData playerData, GatheringMenu.Type type, List<GatheringTable> tableList, SomWorker worker) {
+        int level = worker.getLevel(type);
         for (GatheringTable table : tableList) {
-            int amount = give(table, 1 + worker.getLevel(type)*0.05);
-            exp += addExp * amount;
-            if (amount > 0) playerData.getGatheringMenu().getGatheringItem().merge(table.item().getId(), amount, Integer::sum);
+            int amount = give(table, worker.getPower(type));
+            if (amount > 0) playerData.getGatheringMenu().addGatheringItem(table.item(), amount);
         }
-        worker.addExp(type, exp);
+        worker.addExp(type, GatheringMenu.getExp(level) * GatheringTime * 0.1);
     }
 
     private static int give(GatheringTable table, double power) {

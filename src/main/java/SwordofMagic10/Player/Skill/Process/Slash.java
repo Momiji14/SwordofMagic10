@@ -22,7 +22,7 @@ public class Slash extends SomSkill {
         if (ray.isHitEntity()) {
             Damage.makeDamage(playerData, ray.getHitEntity(), DamageEffect.None, DamageOrigin.ATK, getDamage());
         }
-        SomParticle particle = new SomParticle(Particle.SWEEP_ATTACK);
+        SomParticle particle = new SomParticle(Particle.SWEEP_ATTACK, playerData);
         particle.widthLine(playerData.getViewers(), ray.getHitPosition(), 0, 1);
         SomSound.Slash.play(playerData.getViewers(), playerData.getSoundLocation());
         return null;

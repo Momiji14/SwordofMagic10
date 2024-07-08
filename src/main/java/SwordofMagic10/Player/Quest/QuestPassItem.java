@@ -2,12 +2,16 @@ package SwordofMagic10.Player.Quest;
 
 import SwordofMagic10.Component.SomJson;
 import SwordofMagic10.Component.SomSound;
+import SwordofMagic10.Component.SomText;
 import SwordofMagic10.Item.SomItem;
 import SwordofMagic10.Item.SomItemStack;
 import SwordofMagic10.Player.PlayerData;
+import SwordofMagic10.Player.Shop.RecipeData;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static SwordofMagic10.Component.Function.decoText;
 
 public class QuestPassItem extends QuestPhase {
     private final List<SomItemStack> reqItem = new ArrayList<>();
@@ -31,7 +35,7 @@ public class QuestPassItem extends QuestPhase {
 
     public boolean check(PlayerData playerData) {
         for (SomItemStack reqItem : reqItem) {
-            if (!playerData.getItemInventory().has(reqItem)) {
+            if (!playerData.getItemInventory().req(reqItem)) {
                 return false;
             }
         }
@@ -42,19 +46,33 @@ public class QuestPassItem extends QuestPhase {
         return reqItem;
     }
 
-    public void passItem(PlayerData playerData) {
+    public boolean passItem(PlayerData playerData) {
         if (!flag) {
             if (check(playerData)) {
                 for (SomItemStack reqItem : reqItem) {
-                    playerData.getItemInventory().remove(reqItem);
+                    playerData.getItemInventory().removeReq(reqItem);
                 }
                 flag = true;
-                playerData.sendMessage("§c要求§aされた§eアイテム§aを渡しました", SomSound.Nope);
+                playerData.sendMessage("§c要求§aされた§eアイテム§aを渡しました", SomSound.Tick);
+                return true;
             } else {
-                playerData.sendMessage("§aすでに§c要求§aされた§eアイテム§aを§e所持§aしていません", SomSound.Nope);
+                List<SomText> message = new ArrayList<>();
+                message.add(SomText.create(decoText("必要リスト")));
+                for (SomItemStack stack : reqItem) {
+                    SomItem itemData = stack.getItem();
+                    SomText itemText = SomText.create("§7・").add(itemData.toSomText(stack.getAmount()));
+                    if (playerData.getItemInventory().has(stack)) {
+                        message.add(itemText.add("§a✔"));
+                    } else {
+                        message.add(itemText.add("§c✖"));
+                    }
+                }
+                playerData.sendSomText(message, SomSound.Nope);
+                return false;
             }
         } else {
             playerData.sendMessage("§aすでに§eアイテム§aを渡しました", SomSound.Nope);
+            return false;
         }
     }
 
@@ -64,13 +82,13 @@ public class QuestPassItem extends QuestPhase {
     }
 
     @Override
-    public SomJson toJson() {
-        SomJson json = new SomJson();
-        return json;
-    }
-
-    @Override
-    public QuestPhase fromJson(SomJson json) {
-        return clone();
+    public List<String> sidebarLine(PlayerData playerData) {
+        List<String> list = new ArrayList<>();
+        for (SomItemStack stack : reqItem) {
+            SomItem item = stack.getItem();
+            SomItemStack hasStack = playerData.getItemInventory().get(item).orElse(new SomItemStack(item, 0));
+            list.add("§7・§r" + item.getColorTierDisplay() + " §a" + hasStack.getAmount() + "/" + stack.getAmount());
+        }
+        return list;
     }
 }

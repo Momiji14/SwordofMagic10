@@ -50,8 +50,10 @@ public class SkillGroupLoader {
                 SkillGroup skillGroup = new SkillGroup();
                 skillGroup.setId(id);
                 skillGroup.setDisplay(data.getString("Display"));
+                skillGroup.setNick(data.getString("Nick"));
                 skillGroup.setIcon(Material.valueOf(data.getString("Icon")));
                 skillGroup.setLore(loreText(data.getStringList("Lore")));
+                skillGroup.setHide(data.getBoolean("Hide", false));
                 ClassType.valueOf(data.getString("OwnerClass")).addSkillGroup(skillGroup);
                 skillGroupList.put(id, skillGroup);
                 list.add(skillGroup);

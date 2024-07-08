@@ -1,6 +1,7 @@
 package SwordofMagic10.Component;
 
 import SwordofMagic10.Player.PlayerData;
+import SwordofMagic10.SomCore;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
@@ -10,8 +11,14 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.metadata.MetadataValue;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Collection;
+
+import static SwordofMagic10.Component.Config.SomParticleAddress;
 
 public class PacketEvents extends PacketAdapter {
     public PacketEvents(@NotNull PacketAdapter.AdapterParameteters params) {
@@ -30,14 +37,21 @@ public class PacketEvents extends PacketAdapter {
                 if (playerData.getCollect().getCoolTime().containsKey(location)) {
                     packet.getBlockData().write(0, WrappedBlockData.createData(Material.AIR.createBlockData()));
                 }
+                if (playerData.getMining().getCoolTime().containsKey(location)) {
+                    packet.getBlockData().write(0, WrappedBlockData.createData(Material.COBBLESTONE.createBlockData()));
+                }
+                if (playerData.getLumber().getCoolTime().containsKey(location)) {
+                    packet.getBlockData().write(0, WrappedBlockData.createData(Material.STRIPPED_OAK_WOOD.createBlockData()));
+                }
             }
-        } else if (packetType == PacketType.Play.Server.WORLD_PARTICLES
-                || packetType == PacketType.Play.Server.STOP_SOUND
-                || packetType == PacketType.Play.Server.ENTITY_SOUND
-                || packetType == PacketType.Play.Server.CUSTOM_SOUND_EFFECT
-                || packetType == PacketType.Play.Server.NAMED_SOUND_EFFECT) {
-            if (playerData.isAFK()) {
-                event.setCancelled(true);
+        } else if (packetType == PacketType.Play.Server.SPAWN_ENTITY) {
+            if (playerData.isBE()) {
+                Entity entity = packet.getEntityModifier(event).read(0);
+                if (entity != null) {
+                    switch (entity.getType()) {
+                        case ITEM_DISPLAY, BLOCK_DISPLAY -> event.setCancelled(true);
+                    }
+                }
             }
         }
     }

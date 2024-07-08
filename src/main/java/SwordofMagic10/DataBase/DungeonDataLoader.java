@@ -1,12 +1,13 @@
 package SwordofMagic10.DataBase;
 
 import SwordofMagic10.Component.Config;
-import SwordofMagic10.Dungeon.DungeonDifficulty;
-import SwordofMagic10.Dungeon.Instance.BattleArea;
-import SwordofMagic10.Dungeon.Instance.DungeonInstance;
-import SwordofMagic10.Dungeon.Instance.DungeonReward;
-import SwordofMagic10.Item.SomEquipment;
+import SwordofMagic10.Component.CustomLocation;
 import SwordofMagic10.Item.SomItem;
+import SwordofMagic10.Player.Dungeon.DungeonDifficulty;
+import SwordofMagic10.Player.Dungeon.Instance.BattleArea;
+import SwordofMagic10.Player.Dungeon.Instance.DungeonInstance;
+import SwordofMagic10.Player.Dungeon.Instance.DungeonReward;
+import SwordofMagic10.Item.SomEquipment;
 import SwordofMagic10.Player.Classes.Classes;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -19,6 +20,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 
+import static SwordofMagic10.Component.Function.loreText;
 import static SwordofMagic10.SomCore.Log;
 import static SwordofMagic10.SomCore.World;
 
@@ -51,7 +53,13 @@ public class DungeonDataLoader {
                 String display = data.getString("Display");
                 Material icon = Material.valueOf(data.getString("Icon"));
                 DungeonInstance dungeon = new DungeonInstance(id, icon, display, true);
+                if (data.isSet("Lore")) {
+                    dungeon.setLore(loreText(data.getStringList("Lore")));
+                } else {
+                    dungeon.getLore().add("§a" + display + "です");
+                }
                 dungeon.setIndex(data.getInt("Index"));
+                dungeon.setType(DungeonInstance.Type.valueOf(data.getString("Type", "Normal")));
                 String locationKey = "StartLocation.";
                 dungeon.setStartLocation(data.getDouble(locationKey + "x"),data.getDouble(locationKey + "y"), data.getDouble(locationKey + "z"), (float) data.getDouble(locationKey + "yaw"), (float) data.getDouble(locationKey + "pitch"));
                 locationKey = "GoalLocation.";
@@ -63,9 +71,10 @@ public class DungeonDataLoader {
                 dungeon.setDungeonLevel(data.getInt("DungeonLevel"));
                 dungeon.setBossData(MobDataLoader.getMobData(data.getString("BossData")));
                 if (data.isSet("Reward.Series")) {
-                    for (String series : data.getStringList("Reward.Series")) {
+                    dungeon.setSeries(data.getStringList("Reward.Series"));
+                    for (String series : dungeon.getSeries()) {
                         for (SomEquipment equipment : ItemDataLoader.getSeries(series)) {
-                            dungeon.addRewardItem(equipment);
+                            dungeon.addRewardItem(equipment.clone());
                         }
                     }
                 }
@@ -73,28 +82,26 @@ public class DungeonDataLoader {
                     if (data.isSet(difficulty + ".BaseLevel")) {
                         dungeon.setBaseLevel(difficulty, data.getInt(difficulty + ".BaseLevel"));
                         dungeon.setBossLevel(difficulty, data.getInt(difficulty + ".BossLevel"));
+                        dungeon.setItemLevel(difficulty, data.getInt(difficulty + ".ItemLevel"));
                         dungeon.setLevelSync(difficulty, data.getInt(difficulty + ".LevelSync"));
                         DungeonReward reward = new DungeonReward();
-                        if (data.isSet(difficulty + ".Reward.Exp")) {
-                            reward.setExp(data.getInt(difficulty + ".Reward.Exp"));
-                        } else {
-                            int level = dungeon.getBaseLevel(difficulty);
-                            reward.setExp(500 + level*100 + (Classes.getReqExp(level) / (5+level)));
-                        }
+                        int level = dungeon.getBaseLevel(difficulty);
+                        reward.setExp((int) (500 + level*100 + Classes.getExp(level) * difficulty.getMultiply()));
+                        reward.setMel((int) ((100 + level) * difficulty.getMultiply()));
                         if (data.isSet(difficulty + ".Reward.UpgradeStone.Tier")) {
                             reward.setUpgradeStone(data.getInt(difficulty + ".Reward.UpgradeStone.Tier"), data.getDouble(difficulty + ".Reward.UpgradeStone.Percent"));
                         } else {
-                            reward.setUpgradeStone(difficulty.ordinal()+1, 10.2 + dungeon.getIndex());
+                            reward.setUpgradeStone(difficulty.ordinal()+1, 5.5 + dungeon.getIndex() * 1.0);
                         }
                         if (data.isSet(difficulty + ".Reward.TierStone.Tier")) {
                             reward.setTierStone(data.getInt(difficulty + ".Reward.TierStone.Tier"), data.getDouble(difficulty + ".Reward.TierStone.Percent"));
                         } else {
-                            reward.setTierStone(difficulty.ordinal()+1, 0.1 + dungeon.getIndex() * 0.01);
+                            reward.setTierStone(difficulty.ordinal()+1, 0.1 + dungeon.getIndex() * 0.15);
                         }
                         if (data.isSet(difficulty + ".Reward.QualityStone.Tier")) {
                             reward.setQualityStone(data.getInt(difficulty + ".Reward.QualityStone.Tier"), data.getDouble(difficulty + ".Reward.QualityStone.Percent"));
                         } else {
-                            reward.setQualityStone(difficulty.ordinal()+1, 0.3 + dungeon.getIndex() * 0.01);
+                            reward.setQualityStone(difficulty.ordinal()+1, 0.5 + dungeon.getIndex() * 0.3);
                         }
                         dungeon.setReward(difficulty, reward);
                     }
@@ -104,7 +111,7 @@ public class DungeonDataLoader {
                     BattleArea battleArea = new BattleArea();
                     battleArea.setRadius(data.getDouble("BattleArea-" + i + ".EnterRadius"));
                     locationKey = "BattleArea-" + i + ".EnterLocation.";
-                    battleArea.setEnterLocation(new Location(World, data.getDouble(locationKey + "x", 0), data.getDouble(locationKey + "y", 0), data.getDouble(locationKey + "z", 0)));
+                    battleArea.setEnterLocation(new CustomLocation(World, data.getDouble(locationKey + "x", 0), data.getDouble(locationKey + "y", 0), data.getDouble(locationKey + "z", 0)));
                     for (String strData : data.getStringList("BattleArea-" + i + ".SpawnEnemy")) {
                         String[] split = strData.split(",");
                         String enemyId = split[0];
@@ -132,6 +139,6 @@ public class DungeonDataLoader {
                 SomLoader.error(file, e);
             }
         }
-        list.sort(Comparator.comparing(dungeon -> dungeon.getBaseLevel(DungeonDifficulty.Easy)));
+        list.sort(Comparator.comparing(DungeonInstance::getIndex));
     }
 }

@@ -6,12 +6,10 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.banner.Pattern;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Item;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.BannerMeta;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
-import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.inventory.meta.*;
 import org.bukkit.inventory.meta.trim.TrimMaterial;
 import org.bukkit.inventory.meta.trim.TrimPattern;
 import org.bukkit.persistence.PersistentDataType;
@@ -39,7 +37,7 @@ public class CustomItemStack extends ItemStack implements Cloneable {
     }
 
     public void setAmount(int amount) {
-        super.setAmount(MinMax(amount, 1, 127));
+        super.setAmount(MinMax(amount, 1, 100));
     }
 
     public CustomItemStack setAmountReturn(int amount) {
@@ -135,8 +133,13 @@ public class CustomItemStack extends ItemStack implements Cloneable {
     }
 
     public CustomItemStack setGlowing() {
+        return setGlowing(true);
+    }
+    public CustomItemStack setGlowing(boolean bool) {
         ItemMeta meta = getItemMeta();
-        meta.addEnchant(Enchantment.DURABILITY, 0, true);
+        if (bool) {
+            meta.addEnchant(Enchantment.DURABILITY, 0, true);
+        }
         setItemMeta(meta);
         return this;
     }
@@ -167,6 +170,15 @@ public class CustomItemStack extends ItemStack implements Cloneable {
         return this;
     }
 
+    public CustomItemStack reloadCrossBowArrow() {
+        ItemMeta meta = getItemMeta();
+        if (meta instanceof CrossbowMeta crossbow) {
+            crossbow.addChargedProjectile(new ItemStack(Material.ARROW));
+            setItemMeta(crossbow);
+        }
+        return this;
+    }
+
     public CustomItemStack setCustomData(String id, String value) {
         ItemMeta meta = getItemMeta();
         meta.getPersistentDataContainer().set(new NamespacedKey(SomCore.plugin(), id), PersistentDataType.STRING, value);
@@ -181,6 +193,13 @@ public class CustomItemStack extends ItemStack implements Cloneable {
         return this;
     }
 
+    public CustomItemStack setCustomData(String id, double value) {
+        ItemMeta meta = getItemMeta();
+        meta.getPersistentDataContainer().set(new NamespacedKey(SomCore.plugin(), id), PersistentDataType.DOUBLE, value);
+        setItemMeta(meta);
+        return this;
+    }
+
     public CustomItemStack setCustomData(String id, boolean value) {
         ItemMeta meta = getItemMeta();
         meta.getPersistentDataContainer().set(new NamespacedKey(SomCore.plugin(), id), PersistentDataType.BOOLEAN, value);
@@ -189,8 +208,10 @@ public class CustomItemStack extends ItemStack implements Cloneable {
     }
 
     public static boolean hasCustomData(ItemStack item, String id) {
-        ItemMeta meta = item.getItemMeta();
-        return meta.getPersistentDataContainer().has(new NamespacedKey(SomCore.plugin(), id));
+        if (item.hasItemMeta()) {
+            ItemMeta meta = item.getItemMeta();
+            return meta.getPersistentDataContainer().has(new NamespacedKey(SomCore.plugin(), id));
+        } else return false;
     }
 
     public static String getCustomData(ItemStack item, String id) {
@@ -202,6 +223,12 @@ public class CustomItemStack extends ItemStack implements Cloneable {
         ItemMeta meta = item.getItemMeta();
         return meta.getPersistentDataContainer().get(new NamespacedKey(SomCore.plugin(), id), PersistentDataType.INTEGER);
     }
+
+    public static Double getCustomDataDouble(ItemStack item, String id) {
+        ItemMeta meta = item.getItemMeta();
+        return meta.getPersistentDataContainer().get(new NamespacedKey(SomCore.plugin(), id), PersistentDataType.DOUBLE);
+    }
+
 
     public static Boolean getCustomDataBoolean(ItemStack item, String id) {
         ItemMeta meta = item.getItemMeta();

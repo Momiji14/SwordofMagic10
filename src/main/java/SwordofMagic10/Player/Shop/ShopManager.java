@@ -20,9 +20,9 @@ import static SwordofMagic10.Component.Function.decoText;
 public class ShopManager extends GUIManager.Bar {
 
     private ShopData shopData;
-    private int page = 1;
+    private int page = 0;
     public int offset() {
-        return (page-1) * 45;
+        return page * 45;
     }
 
     public void addPage() {
@@ -30,7 +30,7 @@ public class ShopManager extends GUIManager.Bar {
     }
 
     public void removePage() {
-        page = Math.max(1, page - 1);
+        page = Math.max(0, page - 1);
     }
 
     public ShopManager(PlayerData playerData) {
@@ -67,11 +67,11 @@ public class ShopManager extends GUIManager.Bar {
                         if (shopSlot.hasRecipe()) {
                             recipeData = shopSlot.getRecipe();
                             for (SomItemStack stack : recipeData.getRecipeSlot()) {
-                                SomText itemText = SomText.create("§7・").addText(stack.getItem().toSomText(stack.getAmount()));
+                                SomText itemText = SomText.create("§7・").add(stack.getItem().toSomText(stack.getAmount() * buyAmount));
                                 if (playerData.getItemInventory().has(stack, buyAmount)) {
-                                    message.add(itemText.addText("§a✔"));
+                                    message.add(itemText.add("§a✔"));
                                 } else {
-                                    message.add(itemText.addText("§c✖"));
+                                    message.add(itemText.add("§c✖"));
                                     fall = true;
                                 }
                             }
@@ -139,7 +139,7 @@ public class ShopManager extends GUIManager.Bar {
                 slot++;
             }
             setContents(contents);
-            if (page > 1) setItem(45, Config.DownScrollIcon);
+            if (page > 0) setItem(45, Config.DownScrollIcon);
             if (shopData.getMaxPage() > page) setItem(53, Config.UpScrollIcon);
         }
         updateBar();

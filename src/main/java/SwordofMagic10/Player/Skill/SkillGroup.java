@@ -10,10 +10,12 @@ import java.util.List;
 public class SkillGroup {
     private String id;
     private String display;
+    private String nick;
     private Material icon;
     private List<String> lore = new ArrayList<>();
     private final List<SkillData> list = new ArrayList<>();
     private ClassType ownerClass;
+    private boolean hide = false;
 
     public String getId() {
         return id;
@@ -29,6 +31,14 @@ public class SkillGroup {
 
     public void setDisplay(String display) {
         this.display = display;
+    }
+
+    public String getNick() {
+        return nick;
+    }
+
+    public void setNick(String nick) {
+        this.nick = nick;
     }
 
     public Material getIcon() {
@@ -61,6 +71,14 @@ public class SkillGroup {
 
     public void setOwnerClass(ClassType ownerClass) {
         this.ownerClass = ownerClass;
+    }
+
+    public boolean isHide() {
+        return hide;
+    }
+
+    public void setHide(boolean hide) {
+        this.hide = hide;
     }
 
     public CustomItemStack viewItem() {

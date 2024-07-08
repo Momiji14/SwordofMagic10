@@ -4,13 +4,19 @@ import SwordofMagic10.Entity.SomEntity;
 import SwordofMagic10.Player.PlayerData;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.Fence;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.EntityType;
 import org.bukkit.util.Vector;
 
+import javax.xml.stream.events.StartDocument;
 import java.util.Collection;
+
+import static SwordofMagic10.Component.Function.randomDouble;
 
 public class SomBlockParticle extends SomDisplayParticle {
 
@@ -30,8 +36,8 @@ public class SomBlockParticle extends SomDisplayParticle {
     }
 
     public void bell(Collection<PlayerData> viewers, Location location, double size) {
-        SomDisplayParticle particle = new SomBlockParticle(blockData).setBillboard(Display.Billboard.FIXED);
-        SomDisplayParticle particle2 = new SomBlockParticle(blockData).setBillboard(Display.Billboard.FIXED);
+        SomDisplayParticle particle = addChild(new SomBlockParticle(blockData).setBillboard(Display.Billboard.FIXED));
+        SomDisplayParticle particle2 = addChild(new SomBlockParticle(blockData).setBillboard(Display.Billboard.FIXED));
         particle.setScale(0, 0, 0);
         particle2.setScale(0, 0, 0);
         particle.addAnimation(new CustomTransformation().setScale(size*2, size*2.5, size*2).setOffset(size*-1, size*0.5, size*-1).setTime(10));
@@ -48,7 +54,7 @@ public class SomBlockParticle extends SomDisplayParticle {
         double y = 0;
         for (int i = 0; i < step; i++) {
             double current = size/(1 + i * (2.0/step));
-            SomDisplayParticle particle = new SomBlockParticle(blockData).setBillboard(Display.Billboard.FIXED);
+            SomDisplayParticle particle = addChild(new SomBlockParticle(blockData)).setBillboard(Display.Billboard.FIXED);
             particle.setScale(0, 0, 0);
             particle.addAnimation(new CustomTransformation().setScale(current, current, current).setOffset(current/-2, y, current/-2).setTime(10));
             particle.addAnimation(new AnimationDelay(duration));
@@ -56,6 +62,34 @@ public class SomBlockParticle extends SomDisplayParticle {
             particle.spawn(viewers, location);
             y += current;
         }
+    }
+
+    //突き刺す
+    public void stick(Collection<PlayerData> viewers, CustomLocation location, int duration){
+
+        //Location制定
+        double randomX = randomDouble(-2, 2);
+        double randomZ = randomDouble(-2, 2);
+
+        CustomLocation startLocation = location.clone().addXZ(randomX, randomZ).addY(10);
+        startLocation.lookLocation(location.addY(-0.25));
+
+        SomDisplayParticle display = addChild(new SomBlockParticle(blockData));
+        //初期回転
+        display.setBillboard(Display.Billboard.FIXED);
+        display.setLeftRotation(startLocation);
+        display.setRightRotation(0, 90, 0);
+
+        //アニメーション
+        display.setScale(0, 0, 0);
+        CustomTransformation flame = display.clone().setScale(1.5, 1.5, 2.0).setTime(2);
+        display.addAnimation(flame);
+        display.addAnimation(flame.setOffset(startLocation.toLocationVector(location)));
+
+        display.addAnimation(new AnimationDelay(duration));
+        display.addAnimation(flame.setScale(0, 0, 0));
+
+        display.spawn(viewers, startLocation);
     }
 
     public void rotationCircleAtEntity(Collection<PlayerData> viewers, SomEntity entity, double size, double offsetY, double radius, int point, int rotationTick, int duration, int acc) {
@@ -73,7 +107,7 @@ public class SomBlockParticle extends SomDisplayParticle {
         }
         int animFlame = duration / rotationTick;
         for (int i = 0; i < point; i++) {
-            SomDisplayParticle particle = new SomBlockParticle(blockData).setBillboard(Display.Billboard.FIXED);
+            SomDisplayParticle particle = addChild(new SomBlockParticle(blockData)).setBillboard(Display.Billboard.FIXED);
             particle.setScale(0, 0, 0);
             CustomTransformation transformation = particle.clone().setOffset(points[i*acc]).setScale(size).setTime(rotationTick/acc);
             for (int i2 = 1; i2 < animFlame * acc; i2++) {

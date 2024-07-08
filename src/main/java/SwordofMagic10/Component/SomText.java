@@ -1,18 +1,18 @@
 package SwordofMagic10.Component;
 
-import net.md_5.bungee.api.chat.*;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 
 public class SomText implements Cloneable, Serializable {
 
-    private ComponentBuilder builder = new ComponentBuilder();
+    private TextComponent.Builder builder = Component.empty().toBuilder();
 
     public static SomText create(String text) {
-        return new SomText().addText(text);
+        return new SomText().add(text);
     }
 
     public static SomText create() {
@@ -23,32 +23,23 @@ public class SomText implements Cloneable, Serializable {
 
     }
 
-    public SomText reset() {
-        builder.reset();
+    public SomText add(String text) {
+        builder.append(Component.text(text));
         return this;
     }
 
-    public SomText addText(String text) {
-        builder.append(text);
-        return this;
-    }
-
-    public SomText addText(SomText text) {
+    public SomText add(SomText text) {
         builder.append(text.toComponent());
         return this;
     }
 
-    public SomText addLore(String prefix, String value) {
-        builder.append("§7・§e" + prefix + "§7: §a" + value);
+    public SomText add(Component component) {
+        builder.append(component);
         return this;
     }
 
-    public SomText addLore(String prefix, int value) {
-        return addLore(prefix, String.valueOf(value));
-    }
-
     public SomText addDeco(String text) {
-        builder.append("§6====== " + text + " §6======");
+        builder.append(Component.text("§6======§r " + text + " §6======"));
         return this;
     }
 
@@ -57,16 +48,14 @@ public class SomText implements Cloneable, Serializable {
     }
 
     public SomText addHover(String text, SomText hoverText) {
-        TextComponent hover = new TextComponent(text);
-        hover.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hoverText.toComponent()));
-        builder.append(hover);
+        builder.append(Component.text(text).hoverEvent(HoverEvent.showText(hoverText.toComponent())));
         return this;
     }
 
     public SomText addClickEvent(String text, SomText hoverText, String command, ClickEvent.Action action) {
-        TextComponent runCommand = new TextComponent(text);
-        runCommand.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hoverText.toComponent()));
-        runCommand.setClickEvent(new ClickEvent(action, command));
+        TextComponent runCommand = Component.text(text);
+        runCommand = runCommand.hoverEvent(HoverEvent.showText(hoverText.toComponent()));
+        runCommand = runCommand.clickEvent(ClickEvent.clickEvent(action, command));
         builder.append(runCommand);
         return this;
     }
@@ -104,24 +93,19 @@ public class SomText implements Cloneable, Serializable {
     }
 
     public SomText newLine() {
-        builder.append("\n");
+        builder = builder.appendNewline();
         return this;
     }
 
-    public BaseComponent[] toComponent() {
-        return builder.create();
-    }
-
-    public static SomText getNowTime() {
-        String formatNowDate = DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH時mm分ss秒 E曜日").format(LocalDateTime.now());
-        return SomText.create().addRunCommand("§7[" + LocalTime.now().format(DateTimeFormatter.ofPattern("H:m:s")) + "]§r", "§e" + formatNowDate, "/chatTimeStamp");
+    public Component toComponent() {
+        return builder.build();
     }
 
     @Override
     public SomText clone() {
         try {
             SomText clone = (SomText) super.clone();
-            clone.builder = new ComponentBuilder(builder);
+            clone.builder = builder;
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();

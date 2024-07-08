@@ -1,16 +1,22 @@
 package SwordofMagic10.Entity;
 
+import SwordofMagic10.Component.Config;
+import SwordofMagic10.Component.CustomItemStack;
+import SwordofMagic10.Component.CustomLocation;
+import SwordofMagic10.Item.SomItem;
+import SwordofMagic10.Item.SomPotion;
 import SwordofMagic10.Player.Skill.SomSkill;
 
 import java.util.HashMap;
+import java.util.UUID;
 
-public class SomEffect implements SomStatus, Cloneable {
+public class SomEffect implements SomStatus.Basic, Cloneable {
 
     public enum List {
         Stun(new SomEffect("Stun", "スタン", false, 0).setStun(true).setSilence("All")),
         Silence(new SomEffect("Silence", "沈黙", false, 0).setSilence("All")),
-        Freeze(new SomEffect("Freeze", "凍結", false, 0).setStun(true).setSilence("All")),
-        Slow(new SomEffect("Slow", "スロー", false, 0).setStatusReturn(StatusType.Movement, -0.5)),
+        Freeze(new SomEffect("Freeze", "氷結", false, 0).setStun(true).setSilence("All")),
+        Slow(new SomEffect("Slow", "スロー", false, 0).setMultiply(StatusType.Movement, -0.75)),
         Invincible(new SomEffect("Invincible", "無敵", true, 1).setInvincible(true)),
         ;
 
@@ -30,8 +36,7 @@ public class SomEffect implements SomStatus, Cloneable {
     private SomEntity owner;
     private boolean isBuff;
     private Rank rank = Rank.Normal;
-    private int time;
-    private boolean isToggle = false;
+    private double time;
     private int stack = 1;
     private boolean statusUpdate = false;
     private boolean invincible = false;
@@ -40,14 +45,18 @@ public class SomEffect implements SomStatus, Cloneable {
     private boolean extend = false;
     private final double[] doubleData = new double[4];
     private HashMap<StatusType, Double> status = new HashMap<>();
+    private HashMap<StatusType, Double> basicStatus = new HashMap<>();
+    private final DeleteFlag deleteFlag = new DeleteFlag();
+    private final UUID uuid = UUID.randomUUID();
+    private SomPotion formItem = null;
 
-    public SomEffect(String id, String display, boolean isBuff, int time) {
+    public SomEffect(String id, String display, boolean isBuff, double time) {
         this.id = id;
         this.display = display;
         this.isBuff = isBuff;
         this.time = time;
     }
-    public SomEffect(String id, String display, boolean isBuff, int time, int stack) {
+    public SomEffect(String id, String display, boolean isBuff, double time, int stack) {
         this.id = id;
         this.display = display;
         this.isBuff = isBuff;
@@ -55,22 +64,31 @@ public class SomEffect implements SomStatus, Cloneable {
         this.stack = stack;
     }
 
-    public SomEffect(String id, String display, boolean isBuff, boolean toggle) {
-        this.id = id;
-        this.display = display;
-        this.isBuff = isBuff;
-        this.time = 1;
-        this.isToggle = toggle;
-    }
-
     public SomEffect(SomSkill skill, boolean isBuff) {
         this.id = skill.getId();
         this.display = skill.getDisplay();
         this.isBuff = isBuff;
         this.time = skill.getDuration();
-        skill.getStatus().forEach(this::setStatus);
+        owner = skill.getPlayerData();
+        skill.getStatus().forEach(((statusType, value) -> {
+            switch (statusType) {
+                case DamageResist, CastTime, CoolTime, RigidTime -> setMultiply(statusType, 1-value);
+                default -> setMultiply(statusType, value);
+            }
+        }));
     }
 
+    public UUID getUUID() {
+        return uuid;
+    }
+
+    public boolean isDelete() {
+        return deleteFlag.isDelete();
+    }
+
+    public void delete() {
+        deleteFlag.delete();
+    }
 
     public String getId() {
         return id;
@@ -80,12 +98,17 @@ public class SomEffect implements SomStatus, Cloneable {
         return display;
     }
 
+    public String getColorDisplay() {
+        return (isBuff() ? "§e" : "§c") + getDisplay();
+    }
+
     public SomEntity getOwner() {
         return owner;
     }
 
-    public void setOwner(SomEntity owner) {
+    public SomEffect setOwner(SomEntity owner) {
         this.owner = owner;
+        return this;
     }
 
     public boolean isBuff() {
@@ -105,11 +128,11 @@ public class SomEffect implements SomStatus, Cloneable {
         return this;
     }
 
-    public int getTime() {
+    public double getTime() {
         return time;
     }
 
-    public SomEffect setTime(int time) {
+    public SomEffect setTime(double time) {
         this.time = time;
         return this;
     }
@@ -117,17 +140,6 @@ public class SomEffect implements SomStatus, Cloneable {
     public void addTime(int time) {
         this.time += time;
     }
-
-    public boolean isToggle() {
-        return isToggle;
-    }
-
-    public SomEffect setToggle(boolean toggle) {
-        isToggle = toggle;
-        return this;
-    }
-
-
 
     public int getStack() {
         return stack;
@@ -143,7 +155,7 @@ public class SomEffect implements SomStatus, Cloneable {
     }
 
     public boolean isStatusUpdate() {
-        return statusUpdate;
+        return getFixed().size() > 0 || getMultiply().size() > 0 || statusUpdate;
     }
 
     public SomEffect setStatusUpdate(boolean statusUpdate) {
@@ -187,6 +199,18 @@ public class SomEffect implements SomStatus, Cloneable {
         this.extend = extend;
     }
 
+    public boolean hasFromItem() {
+        return formItem != null;
+    }
+
+    public SomPotion getFormItem() {
+        return formItem;
+    }
+
+    public void setFormItem(SomPotion formItem) {
+        this.formItem = formItem;
+    }
+
     public SomEffect setDoubleData(int i, double value) {
         doubleData[i] = value;
         return this;
@@ -201,8 +225,26 @@ public class SomEffect implements SomStatus, Cloneable {
         return status;
     }
 
-    public SomEffect setStatusReturn(StatusType status, double value) {
-        SomStatus.super.setStatus(status, value);
+    @Override
+    public HashMap<StatusType, Double> getBasicStatus() {
+        return basicStatus;
+    }
+
+    public HashMap<StatusType, Double> getMultiply() {
+        return status;
+    }
+
+    public HashMap<StatusType, Double> getFixed() {
+        return basicStatus;
+    }
+
+    public SomEffect setMultiply(StatusType status, double value) {
+        SomStatus.Basic.super.setStatus(status, value);
+        return this;
+    }
+
+    public SomEffect setFixed(StatusType status, double value) {
+        SomStatus.Basic.super.setBasicStatus(status, value);
         return this;
     }
 
@@ -213,11 +255,73 @@ public class SomEffect implements SomStatus, Cloneable {
             clone.time = time;
             clone.stack = stack;
             clone.status = new HashMap<>(status);
+            clone.basicStatus = new HashMap<>(basicStatus);
             clone.extend = extend;
             // TODO: このクローンが元の内部を変更できないようにミュータブルな状態をここにコピーします
             return clone;
         } catch (CloneNotSupportedException e) {
             throw new AssertionError();
+        }
+    }
+
+    public static class Toggle extends SomEffect implements Cloneable {
+
+        public Toggle(String id, String display, boolean isBuff) {
+            super(id, display, isBuff, -1);
+        }
+
+        public Toggle(String id, String display, boolean isBuff, int stack) {
+            super(id, display, isBuff, -1, stack);
+        }
+
+        public Toggle(SomSkill skill, boolean isBuff) {
+            super(skill, isBuff);
+            setTime(-1);
+        }
+
+        @Override
+        public Toggle clone() {
+            return (Toggle) super.clone();
+        }
+    }
+
+    public static class Area extends SomEffect implements Cloneable {
+
+        private CustomLocation location;
+        private double radius;
+
+        public Area(String id, String display, boolean isBuff) {
+            super(id, display, isBuff, -1);
+        }
+
+        public Area(String id, String display, boolean isBuff, int stack) {
+            super(id, display, isBuff, -1, stack);
+        }
+
+        public Area(SomSkill skill, boolean isBuff) {
+            super(skill, isBuff);
+            setTime(-1);
+        }
+
+        public CustomLocation getLocation() {
+            return location;
+        }
+
+        public void setLocation(CustomLocation location) {
+            this.location = location;
+        }
+
+        public double getRadius() {
+            return radius;
+        }
+
+        public void setRadius(double radius) {
+            this.radius = radius;
+        }
+
+        @Override
+        public Area clone() {
+            return (Area) super.clone();
         }
     }
 
@@ -235,6 +339,18 @@ public class SomEffect implements SomStatus, Cloneable {
 
         public String getDisplay() {
             return display;
+        }
+    }
+
+    public static class DeleteFlag {
+        private boolean delete = false;
+
+        public void delete() {
+            this.delete = true;
+        }
+
+        public boolean isDelete() {
+            return delete;
         }
     }
 }

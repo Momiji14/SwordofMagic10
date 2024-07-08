@@ -25,7 +25,7 @@ public class Bash extends SomSkill {
         for (SomEntity hitEntity : ray.getHitEntities()) {
             Damage.makeDamage(playerData, hitEntity, DamageEffect.None, DamageOrigin.ATK, getParameter(SkillParameterType.Damage));
         }
-        SomParticle particle = new SomParticle(Particle.SWEEP_ATTACK);
+        SomParticle particle = new SomParticle(Particle.SWEEP_ATTACK, playerData);
         particle.widthLine(playerData.getViewers(), ray.getHitPosition(), 0, 2);
         SomSound.Slash.play(playerData.getViewers(), playerData.getSoundLocation());
         return null;

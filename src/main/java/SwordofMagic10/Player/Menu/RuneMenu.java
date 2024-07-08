@@ -14,6 +14,8 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
 
+import static SwordofMagic10.Item.SomEquipment.MaxRuneSlot;
+
 public class RuneMenu extends GUIManager {
 
     private SomEquipment equipment;
@@ -69,8 +71,14 @@ public class RuneMenu extends GUIManager {
     }
 
     @Override
-    public void close(InventoryCloseEvent event) {
+    public void open() {
         equipment = null;
+        super.open();
+    }
+
+    @Override
+    public void close(InventoryCloseEvent event) {
+
     }
 
     private static final CustomItemStack NonSlot = new CustomItemStack(Material.BARRIER).setDisplay("§c未開放スロット");
@@ -79,6 +87,7 @@ public class RuneMenu extends GUIManager {
         clear();
         setItem(0, Config.FlameItem);
         setItem(2, Config.FlameItem);
+        setItem(7, Config.FlameItem);
         setItem(8, Config.FlameItem);
 
         if (equipment != null) {
@@ -88,11 +97,11 @@ public class RuneMenu extends GUIManager {
                 setItem(slot, rune.viewItem());
                 slot++;
             }
-            for (int i = equipment.getRuneSlot(); i < 5; i++) {
+            for (int i = equipment.getRuneSlot(); i < MaxRuneSlot; i++) {
                 setItem(i+3, NonSlot);
             }
         } else {
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < MaxRuneSlot; i++) {
                 setItem(i+3, NonSlot);
             }
             setItem(1, Config.AirItem);

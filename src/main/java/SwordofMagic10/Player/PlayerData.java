@@ -1,38 +1,42 @@
 package SwordofMagic10.Player;
 
 import SwordofMagic10.Component.*;
+import SwordofMagic10.DataBase.ItemDataLoader;
+import SwordofMagic10.DataBase.MapDataLoader;
 import SwordofMagic10.DataBase.QuestDataLoader;
-import SwordofMagic10.DataBase.SkillGroupLoader;
-import SwordofMagic10.Dungeon.DungeonDifficulty;
-import SwordofMagic10.Dungeon.DungeonMenu;
+import SwordofMagic10.Pet.SomPet;
+import SwordofMagic10.Player.Achievement.AchievementMenu;
+import SwordofMagic10.Player.Dungeon.DungeonDifficulty;
+import SwordofMagic10.Player.Dungeon.DungeonMenu;
+import SwordofMagic10.Player.Dungeon.Instance.DefensiveBattle;
+import SwordofMagic10.Player.Dungeon.Instance.DungeonInstance;
 import SwordofMagic10.Entity.*;
 import SwordofMagic10.Item.*;
 import SwordofMagic10.Player.Classes.ClassType;
 import SwordofMagic10.Player.Classes.Classes;
 import SwordofMagic10.Player.Gathering.*;
+import SwordofMagic10.Player.Gathering.ProduceGame.ProduceGame;
 import SwordofMagic10.Player.Help.HelpMenu;
+import SwordofMagic10.Player.Map.MapData;
 import SwordofMagic10.Player.Menu.*;
 import SwordofMagic10.Player.Quest.QuestMenu;
 import SwordofMagic10.Player.Quest.QuestPhase;
 import SwordofMagic10.Player.Quest.SomQuest;
 import SwordofMagic10.Player.Shop.SellManager;
 import SwordofMagic10.Player.Shop.ShopManager;
-import SwordofMagic10.Player.Skill.SkillGroup;
 import SwordofMagic10.Player.Skill.SkillManager;
-import SwordofMagic10.Player.Skill.SomSkill;
 import SwordofMagic10.SomCore;
 import me.libraryaddict.disguise.disguisetypes.PlayerDisguise;
 import me.libraryaddict.disguise.disguisetypes.watchers.PlayerWatcher;
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitTask;
@@ -41,29 +45,35 @@ import org.bukkit.util.Vector;
 
 import javax.annotation.Nullable;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
+import static SwordofMagic10.Component.Config.DateFormat;
 import static SwordofMagic10.Component.Function.*;
 import static SwordofMagic10.SomCore.Log;
 import static SwordofMagic10.SomCore.SpawnLocation;
 
 public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Member {
 
-    private static final HashMap<UUID, PlayerData> playerData = new HashMap<>();
+    private static final ConcurrentHashMap<UUID, PlayerData> playerData = new ConcurrentHashMap<>();
 
     public static PlayerData get(Player player) {
-        synchronized (playerData) {
-            if (!playerData.containsKey(player.getUniqueId())) {
-                playerData.put(player.getUniqueId(), new PlayerData(player));
-            }
-            return playerData.get(player.getUniqueId());
+        if (!playerData.containsKey(player.getUniqueId())) {
+            playerData.put(player.getUniqueId(), new PlayerData(player));
         }
+        return playerData.get(player.getUniqueId());
     }
 
     public static Collection<PlayerData> getPlayerList() {
-        synchronized (playerData) {
-            return playerData.values();
-        }
+        playerData.values().removeIf(playerData -> !playerData.isOnline());
+        return playerData.values();
+    }
+
+    public static Collection<PlayerData> getPlayerListNonAFK() {
+        List<PlayerData> list = new ArrayList<>(getPlayerList());
+        list.removeIf(PlayerData::isAFK);
+        return list;
     }
 
     public static List<String> getComplete() {
@@ -74,20 +84,22 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         return complete;
     }
 
-    public static String getDisplayName(UUID uuid) {
-        return SomSQL.getString("PlayerData", "UUID", uuid.toString(), "DisplayName");
+    public static String getUsername(UUID uuid) {
+        return SomSQL.getString("PlayerData", "UUID", uuid.toString(), "Username");
     }
 
     private final Player player;
     private final List<GUIManager> guiManagerList = new ArrayList<>();
     private final HashMap<StatusType, Double> status = new HashMap<>();
-    private final HashMap<DamageEffect, Double> damageEffect = new HashMap<>();
-    private final HashMap<String, SomEffect> effect = new HashMap<>();
-    private final HashMap<EquipSlot, SomEquipment> equipment = new HashMap<>();
+    private final HashMap<StatusType, Double> basicStatus = new HashMap<>();
+    private final ConcurrentHashMap<DamageEffect, Double> damageEffect = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, SomEffect> effect = new ConcurrentHashMap<>();
+    private final HashMap<EquipSlot, SomEquip> equipment = new HashMap<>();
     private SomParty party;
     private int levelSync = Classes.MaxLevel;
     private int tierSync = DungeonDifficulty.values().length;
     private int mel = 10000;
+    private final HashMap<String, Integer> viewAmount = new HashMap<>();
     private final InventoryViewer inventoryViewer;
     private final Classes classes;
     private final DungeonMenu dungeonMenu;
@@ -104,22 +116,39 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
     private final TierMenu tierMenu;
     private final QualityMenu qualityMenu;
     private final RuneMenu runeMenu;
+    private final RuneSynthesis runeSynthesis;
+    private final RemakeMenu remakeMenu;
     private final QuestMenu questMenu;
     private final HelpMenu helpMenu;
+    private final SeriesMenu seriesMenu;
+    private final LevelReduceMenu levelReduceMenu;
     private final Setting setting;
+    private final SettingMenu settingMenu;
     private final EquipmentMenu equipmentMenu;
+    private final InfoMenu infoMenu;
     private final Mining mining;
     private final Lumber lumber;
     private final Collect collect;
+    private final Fishing fishing;
+    private final Hunting hunting;
     private final Produce produce;
+    private final ProduceGame produceGame;
     private final GatheringMenu gatheringMenu;
-    private final Statistics statistics = new Statistics();
+    private final AmuletMenu amuletMenu;
+    private final Statistics statistics;
+    private final Market market;
+    private final Order order;
+    private final AchievementMenu achievementMenu;
+    private final PetMenu petMenu;
 
     private int afkTime = 0;
-    private boolean locationLock = false;
+    private CustomLocation afkLocation;
+    private Location locationLock;
     private Location playerSpawn;
     private Location lastLocation;
     private double movementSpeed = 0;
+    private DefensiveBattle defensiveBattle;
+    private MapData mapData;
 
     public PlayerData(Player player) {
         this.player = player;
@@ -139,19 +168,38 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         tierMenu = new TierMenu(this);
         qualityMenu = new QualityMenu(this);
         runeMenu = new RuneMenu(this);
+        runeSynthesis = new RuneSynthesis(this);
+        remakeMenu = new RemakeMenu(this);
         helpMenu = new HelpMenu(this);
+        seriesMenu = new SeriesMenu(this);
+        levelReduceMenu = new LevelReduceMenu(this);
         questMenu = new QuestMenu(this);
         equipmentMenu = new EquipmentMenu(this);
+        infoMenu = new InfoMenu(this);
         gatheringMenu = new GatheringMenu(this);
         mining = new Mining(this);
         lumber = new Lumber(this);
         collect = new Collect(this);
+        fishing = new Fishing(this);
+        hunting = new Hunting(this);
         produce = new Produce(this);
+        produceGame = new ProduceGame(this);
+        market = new Market(this);
+        order = new Order(this);
+        amuletMenu = new AmuletMenu(this);
+        statistics = new Statistics(this);
+        achievementMenu = new AchievementMenu(this);
+        petMenu = new PetMenu(this);
+
 
         setting = new Setting(this);
+        settingMenu = new SettingMenu(this);
         lastLocation = new CustomLocation(player.getLocation());
+        deathLocation = new CustomLocation(player.getLocation());
+        afkLocation = new CustomLocation(player.getLocation());
         playerSpawn = SpawnLocation;
-        initializeScoreBoard();
+        MapDataLoader.getMapData("Alaine").enter(this);
+        initialize();
     }
 
     @Override
@@ -166,6 +214,10 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
 
     public Player getPlayer() {
         return player;
+    }
+
+    public String getUsername() {
+        return player.getName();
     }
 
     public List<GUIManager> getGuiManagerList() {
@@ -228,8 +280,24 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         return runeMenu;
     }
 
+    public RuneSynthesis getRuneSynthesis() {
+        return runeSynthesis;
+    }
+
+    public RemakeMenu getRemakeMenu() {
+        return remakeMenu;
+    }
+
     public HelpMenu getHelpMenu() {
         return helpMenu;
+    }
+
+    public SeriesMenu getSeriesMenu() {
+        return seriesMenu;
+    }
+
+    public LevelReduceMenu getLevelReduceMenu() {
+        return levelReduceMenu;
     }
 
     public QuestMenu getQuestMenu() {
@@ -238,6 +306,10 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
 
     public Setting getSetting() {
         return setting;
+    }
+
+    public SettingMenu getSettingMenu() {
+        return settingMenu;
     }
 
     public Statistics getStatistics() {
@@ -260,6 +332,10 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         return equipmentMenu;
     }
 
+    public InfoMenu getInfoMenu() {
+        return infoMenu;
+    }
+
     public GatheringMenu getGatheringMenu() {
         return gatheringMenu;
     }
@@ -276,8 +352,40 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         return collect;
     }
 
+    public Fishing getFishing() {
+        return fishing;
+    }
+
+    public Hunting getHunting() {
+        return hunting;
+    }
+
     public Produce getProduce() {
         return produce;
+    }
+
+    public ProduceGame getProduceGame() {
+        return produceGame;
+    }
+
+    public Market getMarket() {
+        return market;
+    }
+
+    public Order getOrder() {
+        return order;
+    }
+
+    public AmuletMenu getAmuletMenu() {
+        return amuletMenu;
+    }
+
+    public AchievementMenu getAchievementMenu() {
+        return achievementMenu;
+    }
+
+    public PetMenu getPetMenu() {
+        return petMenu;
     }
 
     public Location getLastLocation() {
@@ -292,6 +400,18 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         return movementSpeed;
     }
 
+    public DefensiveBattle getDefensiveBattle() {
+        return defensiveBattle;
+    }
+
+    public void setDefensiveBattle(DefensiveBattle defensiveBattle) {
+        this.defensiveBattle = defensiveBattle;
+    }
+
+    public boolean isInDefensiveBattle() {
+        return defensiveBattle != null;
+    }
+
     public int getLevelSync() {
         return levelSync;
     }
@@ -302,13 +422,13 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
 
     public void setLevelSync(int levelSync) {
         this.levelSync = levelSync;
-        if (classes.getLevel(classes.getMainClass()) > levelSync) {
+        if (getRawLevel() > levelSync) {
             sendMessage("§eレベルシンク§aにより§eステータス§aが§c低下§aします");
         }
     }
 
     public void resetLevelSync() {
-        if (classes.getLevel(classes.getMainClass()) > levelSync) {
+        if (getRawLevel() > levelSync) {
             sendMessage("§eレベルシンク§aが§b解除§aされました");
         }
         levelSync = Classes.MaxLevel;
@@ -318,13 +438,35 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         return tierSync;
     }
 
+    boolean isTierSync = false;
     public void setTierSync(int tierSync) {
         this.tierSync = tierSync;
+        for (SomEquip item : equipment.values()) {
+            if (item.getTier() > tierSync) {
+                tierSyncMessage();
+                return;
+            }
+            if (item instanceof SomEquipment equipItem) {
+                for (SomRune rune : equipItem.getRune()) {
+                    if (rune.getTier() > tierSync) {
+                        tierSyncMessage();
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    public void tierSyncMessage() {
         sendMessage("§eティアシンク§aにより§eステータス§aが§c低下§aします");
+        isTierSync = true;
     }
 
     public void resetTierSync() {
-        sendMessage("§eティアシンク§aが§b解除§aされました");
+        if (isTierSync) {
+            sendMessage("§eティアシンク§aが§b解除§aされました");
+            isTierSync = false;
+        }
         tierSync = DungeonDifficulty.values().length;
     }
 
@@ -340,12 +482,28 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         this.party = party;
     }
 
+    public void setRank(PlayerRank rank) {
+        SomSQL.setSql("PlayerRank", "UUID", getUUIDAsString(), "Rank", rank.toString());
+    }
+
+    public boolean hasRank(PlayerRank rank) {
+        return getRank().ordinal() >= rank.ordinal();
+    }
+
+    public PlayerRank getRank() {
+        if (SomSQL.existSql("PlayerRank", "UUID", getUUIDAsString())) {
+            return PlayerRank.valueOf(SomSQL.getString("PlayerRank", "UUID", getUUIDAsString(), "Rank"));
+        } else {
+            return PlayerRank.Normal;
+        }
+    }
+
     public void setPlayerSpawn(Location playerSpawn) {
         this.playerSpawn = playerSpawn;
     }
 
     public Location getPlayerSpawn() {
-        return playerSpawn;
+        return playerSpawn != null ? playerSpawn : deathLocation;
     }
 
     public int getMel() {
@@ -364,6 +522,14 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         this.mel -= mel;
     }
 
+    public MapData getMapData() {
+        return mapData;
+    }
+
+    public void setMapData(MapData mapData) {
+        this.mapData = mapData;
+    }
+
     public String getUUIDAsString() {
         return getUUID().toString();
     }
@@ -372,20 +538,8 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         return player.getUniqueId();
     }
 
-    public void sendSomText(SomText text) {
-        sendSomText(text, null);
-    }
-
-    public void sendSomText(SomText text, @Nullable SomSound sound) {
-        player.spigot().sendMessage(text.toComponent());
-        if (sound != null) sound.play(this);
-    }
-
-    public void sendSomText(List<SomText> texts, @Nullable SomSound sound) {
-        for (SomText text : texts) {
-            player.spigot().sendMessage(text.toComponent());
-        }
-        if (sound != null) sound.play(this);
+    public HashMap<String, Integer> getViewAmount() {
+        return viewAmount;
     }
 
     public BossBar sendBossBarMessage(String text, int delay, boolean chat) {
@@ -417,9 +571,58 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         if (sound != null) sound.play(this);
     }
 
+    public void sendSomText(SomText text) {
+        sendSomText(text, null);
+    }
+
+    public void sendSomText(SomText text, @Nullable SomSound sound) {
+        player.sendMessage(text.toComponent());
+        if (sound != null) sound.play(this);
+    }
+
+    public void sendSomText(List<SomText> texts, @Nullable SomSound sound) {
+        for (SomText text : texts) {
+            player.sendMessage(text.toComponent());
+        }
+        if (sound != null) sound.play(this);
+    }
+
     public void sendMessageNonMel() {
         sendMessage("§eメル§aが足りません", SomSound.Nope);
     }
+
+    public boolean sendMessageIsAFK() {
+        if (isAFK()) {
+            sendMessage("§7AFK中§aは出来ません", SomSound.Nope);
+            return true;
+        }
+        return false;
+    }
+
+    public void sendMessageReqRank(PlayerRank rank) {
+        sendMessage("§aこの§e機能§aを§e利用§aするには" + rank.getDisplay() + "§a以上§aが§c必要§aです", SomSound.Nope);
+    }
+
+    public void sendIsFavorite() {
+        sendMessage("§dお気に入り§eアイテム§aです", SomSound.Nope);
+    }
+
+    public boolean sendMessageIsSomReload() {
+        if (SomCore.SomReload) {
+            sendMessage("§4リロード中§aは出来ません", SomSound.Nope);
+            sendMessage("§4リロード中§aは出来ません", SomSound.Nope);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean sendMessageIsInCity() {
+        if (!isInCity()) {
+            sendMessage("§b街内§aでのみ§e利用§aできます");
+            return false;
+        } else return true;
+    }
+
 
     public void sendTitle(String title, String subtitle, int in, int time, int out) {
         player.sendTitle(hexColor(title), hexColor(subtitle), in, time, out);
@@ -441,6 +644,10 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
             put(StatusType.Critical, 10.0);
             put(StatusType.CriticalDamage, 10.0);
             put(StatusType.CriticalResist, 10.0);
+            put(StatusType.CastTime, 1.0);
+            put(StatusType.CoolTime, 1.0);
+            put(StatusType.RigidTime, 1.0);
+            put(StatusType.DamageMultiply, 1.0);
             put(StatusType.DamageResist, 1.0);
             put(StatusType.Movement, 100.0);
         }};
@@ -452,6 +659,8 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         list.add(this);
         if (dungeonMenu.isInDungeon()) {
             list.addAll(dungeonMenu.getDungeon().getMember());
+        } else if (isInDefensiveBattle()) {
+            list.addAll(defensiveBattle.getMember());
         }
         return list;
     }
@@ -459,28 +668,37 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
 
 
     public boolean isLocationLock() {
+        return locationLock != null;
+    }
+
+    public Location getLocationLock() {
         return locationLock;
     }
 
-    public void setLocationLock(boolean locationLock) {
-        player.setAllowFlight(locationLock);
-        player.setFlying(locationLock);
-        player.setFlySpeed(locationLock ? 0.0f : 0.2f);
+    public void setLocationLock(Location locationLock) {
         this.locationLock = locationLock;
+        player.setAllowFlight(isLocationLock());
+        player.setFlying(isLocationLock());
+        player.setFlySpeed(isLocationLock() ? 0.0f : 0.2f);
+    }
+
+    public void resetLocationLock() {
+        setLocationLock(null);
     }
 
     private int evasionWait = 0;
     public void evasion() {
         if (isEvasionAble() && !isLocationLock()) {
             Vector vector;
+            double multiply = getStatus(StatusType.Movement)/50f;
             if (!player.isInWater()) {
                 vector = getDirection().setY(0);
+                vector.multiply(multiply);
                 if (player.isSneaking()) vector.multiply(-1);
-                vector.normalize().setY(0.5);
+                vector.setY(0.5);
             } else {
-                vector = getDirection();
+                vector = getDirection().multiply(multiply);
             }
-            vector.multiply(getStatus(StatusType.Movement)/100f);
             player.setVelocity(vector);
             setEvasionWait(20);
         }
@@ -499,13 +717,91 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         inventoryViewer.updateBar(true);
     }
 
+    private static final int rafLevel = 5;
     public void addEquipmentExp(int addExp, int level) {
+        int max = 0;
         for (EquipSlot equipSlot : EquipSlot.values()) {
-            SomEquipment equipment = getEquipment(equipSlot);
-            if (equipment != null && level >= equipment.getLevel()) {
-                equipment.addExp(addExp);
+            SomEquip item = getEquipment(equipSlot);
+            if (item instanceof SomEquipment equipItem) {
+                if (level >= equipItem.getLevel()-rafLevel) {
+                    max = addExp;
+                    equipItem.addExp(addExp);
+                } else {
+                    int exp = (int) (addExp * 0.1)+1;
+                    if (exp > max) max = exp;
+                    equipItem.addExp(exp);
+                }
             }
         }
+        if (getSetting().isExpLog()) {
+            sendMessage("§a[ExpLog]§r装備EXP §e+" + max);
+        }
+    }
+
+    public List<PlayerData> getMember() {
+        List<PlayerData> list = new ArrayList<>();
+        if (dungeonMenu.isInDungeon()) {
+            list.addAll(dungeonMenu.getDungeon().getMember());
+        } else if (isInDefensiveBattle()) {
+            list.addAll(getDefensiveBattle().getMember());
+        } else if (!isInInstance()) {
+            list.addAll(mapData.getPlayerList());
+        } else {
+            list.add(this);
+        }
+        return list;
+    }
+
+    public List<PlayerData> getMemberNoDeath() {
+        List<PlayerData> list = new ArrayList<>(getMember());
+        list.removeIf(PlayerData::isDeath);
+        return list;
+    }
+
+    public List<PlayerData> getMemberNoDeathNoMe() {
+        List<PlayerData> list = new ArrayList<>(getMemberNoDeath());
+        list.remove(this);
+        return list;
+    }
+
+    public List<PlayerData> getMemberNoMe() {
+        List<PlayerData> list = new ArrayList<>(getMember());
+        list.remove(this);
+        return list;
+    }
+
+    public boolean isInCity() {
+        return mapData.getId().equals("Alaine") && !isInInstance();
+    }
+
+    public boolean isInInstance() {
+        return dungeonMenu.isInDungeon() || isInDefensiveBattle();
+    }
+    
+    public boolean hasBottle(String bottleID) {
+        if (hasEquipment(EquipSlot.Amulet)) {
+            if (getEquipment(EquipSlot.Amulet) instanceof SomAmulet amulet) {
+                for (SomAmulet.Bottle bottle : amulet.getBottles()) {
+                    if (bottle.getId().equals(bottleID)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    public boolean hasBottle(SomAmulet.Bottle bottle) {
+        if (hasEquipment(EquipSlot.Amulet)) {
+            if (getEquipment(EquipSlot.Amulet) instanceof SomAmulet amulet) {
+                for (SomAmulet.Bottle hasBottle : amulet.getBottles()) {
+                    if (hasBottle.getId().equals(bottle.getId())) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     @Override
@@ -523,8 +819,14 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         return isDeath || !player.isOnline();
     }
 
+    public boolean isOnline() {
+        return player.isOnline();
+    }
+
     private boolean isDeath = false;
+    private CustomLocation deathLocation;
     private int respawnWait;
+    private boolean respawn = false;
     private BukkitTask respawnTask;
 
     public void setRespawnWait(int respawnWait) {
@@ -532,13 +834,17 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
     }
 
     public Collection<SomEntity> getDeathAllies() {
-        List<SomEntity> list = new ArrayList<>();
-        for (SomEntity ally : getAllies()) {
-            if (ally.isDeath()) {
-                list.add(ally);
-            }
-        }
-        return list;
+        List<SomEntity> alies = new ArrayList<>(getViewers());
+        alies.removeIf(entity -> !entity.isDeath());
+        return alies;
+    }
+
+    public void setRespawn(boolean respawn) {
+        this.respawn = respawn;
+    }
+
+    public CustomLocation getDeathLocation() {
+        return deathLocation;
     }
 
     @Override
@@ -546,42 +852,69 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         death(null);
     }
     public synchronized void death(String message) {
+        if (isDeath || hasEffect("ShadowPool")) return;
         if (message != null) sendMessage(message);
         isDeath = true;
-        setLocationLock(true);
+        deathLocation = getLocation();
+        setPlayerSpawn(mapData.getGateLocation());
         SomTask.sync(() -> {
-            Entity deathEntity = player.getWorld().spawnEntity(getLocation(), EntityType.INTERACTION);
+            for (Entity passenger : player.getPassengers()) {
+                player.removePassenger(passenger);
+            }
+            player.closeInventory();
+            setLocationLock(deathLocation);
+            Entity deathEntity = player.getWorld().spawnEntity(deathLocation, EntityType.INTERACTION);
+            deathEntity.addScoreboardTag(Config.SomEntityTag);
             PlayerDisguise disguise = new PlayerDisguise(player);
             PlayerWatcher watcher = disguise.getWatcher();
             watcher.setSleeping(true);
+            disguise.setNameVisible(false);
             disguise.setEntity(deathEntity);
             disguise.setWatcher(watcher);
             disguise.startDisguise();
             player.setGameMode(GameMode.SPECTATOR);
             player.sendTitle("§4You Are Dead", "§aRespawn Wait...", 20, 100, 0);
             respawnWait = 10;
+            if (getDungeonMenu().isInDungeon()) {
+                DungeonInstance dungeon = getDungeonMenu().getDungeon();
+                dungeon.addDeathCount(this);
+                if (dungeon.getMatchType() == DungeonMenu.MatchType.Solo) {
+                    respawnWait = 0;
+                }
+            }
             respawnTask = SomTask.timer(() -> {
-                player.sendTitle("§4You Are Dead", "§aRespawn " + respawnWait + " sec", 0, 30, 10);
-                respawnWait--;
-                SomTask.sync(() -> {
-                    boolean respawn = hasEffect("Resurrection");
-                    if (respawnWait < 0) {
-                        teleport(getPlayerSpawn());
-                        if (getDungeonMenu().isInDungeon()) {
-                            getDungeonMenu().getDungeon().addDeathCount(1);
-                        }
-                        respawn = true;
-                    }
-                    if (respawn) {
-                        removeEffect("Resurrection");
+                if (dungeonMenu.isInDungeon() && dungeonMenu.getDungeon().isLegendRaid()) {
+                    player.sendTitle("§4You Are Dead", "§eWait Resurrection", 0, 30, 10);
+                } else {
+                    player.sendTitle("§4You Are Dead", "§aRespawn " + respawnWait + " sec", 0, 30, 10);
+                    respawnWait--;
+                }
+                if (respawnWait < 0) respawn = true;
+                if (respawn) {
+                    respawnTask.cancel();
+                    isDeath = false;
+                    heal();
+                    resetLocationLock();
+                    respawn = false;
+                    addEffect(SomEffect.List.Invincible.getEffect().setTime(3), this);
+                    SomTask.sync(() -> {
                         player.setGameMode(GameMode.ADVENTURE);
-                        respawnTask.cancel();
-                        isDeath = false;
-                        heal();
+                        disguise.stopDisguise();
                         deathEntity.remove();
-                        setLocationLock(false);
-                    }
-                });
+                        if (respawnWait < 0) {
+                            teleport(getPlayerSpawn());
+                        } else {
+                            teleport(deathLocation);
+                        }
+                    });
+                }
+                if (!isOnline()) {
+                    respawnTask.cancel();
+                    SomTask.sync(() -> {
+                        disguise.stopDisguise();
+                        deathEntity.remove();
+                    });
+                }
             }, 100, 20);
         });
     }
@@ -600,8 +933,20 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         return Math.min(levelSync, classes.getLevel(classes.getMainClass()));
     }
 
+    public int getRawLevel() {
+        return  classes.getLevel(classes.getMainClass());
+    }
+
     public boolean isAFK() {
+        if (dungeonMenu.isInDungeon() && dungeonMenu.getDungeon().isLegendRaid()) return false;
+        if (produceGame.isInGame() || fishing.isFishing()) {
+            return afkTime >= 900;
+        }
         return afkTime >= 300;
+    }
+
+    public void setAfkTime(int afkTime) {
+        this.afkTime = afkTime;
     }
 
     public boolean isPlayMode() {
@@ -614,49 +959,65 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
     }
 
     @Override
-    public HashMap<DamageEffect, Double> getDamageEffect() {
+    public HashMap<StatusType, Double> getBasicStatus() {
+        return basicStatus;
+    }
+
+    @Override
+    public ConcurrentHashMap<DamageEffect, Double> getDamageEffect() {
         return damageEffect;
     }
 
     @Override
-    public HashMap<String, SomEffect> getEffect() {
+    public ConcurrentHashMap<String, SomEffect> getEffect() {
         return effect;
     }
 
-    public HashMap<EquipSlot, SomEquipment> getEquipment() {
+    public HashMap<EquipSlot, SomEquip> getEquipment() {
         return equipment;
     }
 
-    public SomEquipment getEquipment(EquipSlot equipSlot) {
+    public SomEquip getEquipment(EquipSlot equipSlot) {
         return equipment.get(equipSlot);
     }
 
-    public void equip(SomEquipment equip) {
-        if (classes.getMainClass().getEquipAble().contains(equip.getEquipmentCategory())) {
-            EquipSlot equipSlot = equip.getEquipmentCategory().getEquipSlot();
-            if (equipment.containsKey(equipSlot)) {
-                itemInventory.add(equipment.get(equipSlot), 1);
-            }
-            itemInventory.remove(equip, 1);
-            equipment.put(equipSlot, equip);
-            if (equip.getLevel() > getLevel()) {
-                sendSomText(SomText.create("§eレベル§aが足りないため§e装備性能§aが§c低下§aします §e[").addText(equip.toSomText().addText("§e]")));
-            }
-            for (SomRune rune : equip.getRune()) {
-                if (rune.getLevel() > getLevel()) {
-                    sendSomText(SomText.create("§eレベル§aが足りないため§eルーン性能§aが§c低下§aします §e[").addText(rune.toSomText().addText("§e]")));
+    public boolean hasEquipment(EquipSlot equipSlot) {
+        return equipment.containsKey(equipSlot);
+    }
+
+    public void equip(SomEquip item) {
+        if (item instanceof SomEquipment equipItem) {
+            if (classes.getMainClass().getEquipAble().contains(equipItem.getEquipmentCategory())) {
+                rawEquip(item);
+                if (equipItem.getLevel() > getLevel()) {
+                    sendSomText(SomText.create("§eレベル§aが足りないため§e装備性能§aが§c低下§aします §e[").add(equipItem.toSomText().add("§e]")));
                 }
+                for (SomRune rune : equipItem.getRune()) {
+                    if (rune.getLevel() > getLevel()) {
+                        sendSomText(SomText.create("§eレベル§aが足りないため§eルーン性能§aが§c低下§aします §e[").add(rune.toSomText().add("§e]")));
+                    }
+                }
+            } else {
+                sendMessage("§c装備条件§aを満たしていません §e[クラス制限]", SomSound.Nope);
             }
-            updateStatus();
-        } else {
-            sendMessage("§c装備条件§aを満たしていません §e[クラス制限]", SomSound.Nope);
+        } else rawEquip(item);
+    }
+
+    private void rawEquip(SomEquip item) {
+        if (equipment.containsKey(item.getEquipSlot())) {
+            itemInventory.add(equipment.get(item.getEquipSlot()), 1);
         }
+        if (item.getEquipSlot() == EquipSlot.Amulet) clearEffectNonPotion();
+        itemInventory.remove(item, 1);
+        equipment.put(item.getEquipSlot(), item);
+        updateStatus();
     }
 
     public void unEquip(EquipSlot equipSlot) {
         if (equipment.containsKey(equipSlot)) {
             itemInventory.add(equipment.get(equipSlot), 1);
         }
+        if (equipSlot == EquipSlot.Amulet) clearEffectNonPotion();
         equipment.remove(equipSlot);
         updateStatus();
     }
@@ -665,135 +1026,206 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
     private Scoreboard board;
     private Objective sidebarObject;
     private Team team;
+    private TextDisplay display;
 
-    public void initializeScoreBoard() {
+    public void initialize() {
+        player.setGravity(true);
         board = Bukkit.getScoreboardManager().getNewScoreboard();
         sidebarObject = board.registerNewObjective("Sidebar", Criteria.DUMMY, decoSeparator("Sword of Magic 10"));
         sidebarObject.setDisplaySlot(DisplaySlot.SIDEBAR);
         team = board.registerNewTeam(player.getName());
-        team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.ALWAYS);
+        team.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.FOR_OWN_TEAM);
         team.addPlayer(player);
         team.setCanSeeFriendlyInvisibles(true);
         player.setScoreboard(board);
+        for (Player player : SomCore.getPlayers()) {
+            team.addPlayer(player);
+        }
+        displayHolo();
+        if (isBE()) {
+            sidebarObject.getScore("§cBE版はサイドバー利用不可").setScore(0);
+        }
     }
+
+    public void displayHolo() {
+        if (display == null || !display.isValid()) {
+            SomTask.sync(() -> {
+                display = (TextDisplay) player.getWorld().spawnEntity(player.getEyeLocation(), EntityType.TEXT_DISPLAY);
+                display.setBackgroundColor(Color.fromARGB(0, 0,0, 0));
+                display.setBillboard(Display.Billboard.VERTICAL);
+                display.addScoreboardTag(Config.SomParticleAddress);
+                display.setTransformation(new CustomTransformation().setOffset(0, 0.6, 0));
+                display.setSeeThrough(true);
+            });
+        }
+    }
+
+    public TextDisplay getDisplayHolo() {
+        return display;
+    }
+
 
     private BukkitTask tickTask;
     private BukkitTask tick5Task;
     private BukkitTask secondTask;
     private BukkitTask secondSyncTask;
+    private BukkitTask second30Task;
+
+    private final int barLength = 30;
+
     public void updateTick() {
-        tickTask = SomTask.timer(() -> {
-            if (player.isOnline()) {
-                if (interaction > 0) interaction--;
-                if (isPlayMode() && !isLoading()) {
-                    addHealth(getHealthRegen() * 0.05);
-                    addMana(getManaRegen() * 0.05);
-                    ClassType mainClass = classes.getMainClass();
-                    if (mainClass != null) {
-                        String skillCastProgress;
-                        if (skillManager.isCastable()) {
-                            skillCastProgress = "§a《Skill Castable》";
-                        } else if (skillManager.getSkillCastProgress() < 1) {
-                            skillCastProgress = "§e《Casting " + scale(skillManager.getSkillCastProgress()*100) + "%》";
-                        } else {
-                            skillCastProgress = "§d《Active " + skillManager.getCastSkill().getDisplay() + "》";
-                        }
-                        player.sendActionBar(
-                                "§e《" + mainClass.getColorDisplay() + " §eLv" + classes.getLevel(mainClass) + "》" +
-                                "§c《Health: " + scale(getHealth()) + "/" + scale(getMaxHealth()) + "§c》" +
-                                skillCastProgress +
-                                "§b《Mana: " + scale(getMana()) + "/" + scale(getMaxMana()) + "》" +
-                                "§a《Exp: " + classes.getExp(mainClass) + "/" + Classes.getReqExp(classes.getLevel(mainClass)) + "》"
-                                //"§e《Movement: " + scale(movementSpeed*4) + "ms/s》"
-                        );
+        if (tickTask != null) tickTask.cancel();
+        if (tick5Task != null) tick5Task.cancel();
+        if (secondTask != null) secondTask.cancel();
+        if (secondSyncTask != null) secondSyncTask.cancel();
+        if (second30Task != null) second30Task.cancel();
+        tickTask = SomTask.timerPlayer(this, () -> {
+            tickEffect(1);
+            if (interaction > 0) interaction--;
+            if (isPlayMode() && !isLoading()) {
+                addHealth(getHealthRegen() * 0.05);
+                addMana(getManaRegen() * 0.05);
+                ClassType mainClass = classes.getMainClass();
+                if (mainClass != null) {
+                    String skillCastProgress;
+                    if (skillManager.isCastable()) {
+                        skillCastProgress = "§a《Skill Castable》";
+                    } else if (skillManager.getSkillCastProgress() < 1) {
+                        skillCastProgress = "§e《Casting " + scale(skillManager.getSkillCastProgress()*100) + "%》";
+                    } else {
+                        skillCastProgress = "§d《Active " + skillManager.getCastSkill().getDisplay() + "》";
                     }
+                    String actionBar =
+                            "§e《" + mainClass.getColorDisplay() + " §eLv" + classes.getLevel(mainClass) + "》" +
+                                    "§c《Health: " + scale(getHealth()) + "/" + scale(getMaxHealth()) + "§c》" +
+                                    skillCastProgress +
+                                    "§b《Mana: " + scale(getMana()) + "/" + scale(getMaxMana()) + "》" +
+                                    "§a《Exp: " + scale(classes.getExp(mainClass)) + "/" + scale(Classes.getReqExp(classes.getLevel(mainClass))) + "》";
+                    if (isBE()) actionBar += " ".repeat(20) + "§e《所持メル: " + mel + "メル》";
+                    player.sendActionBar(actionBar);
+                    double hp = getHealthPercent();
+                    String color;
+                    if (hp > 0.5) color = "§a";
+                    else if (hp > 0.25) color = "§e";
+                    else  color = "§c";
+                    int healthBar = (int) MinMax(getHealthPercent()*barLength, 0, barLength);
+                    //int manaBar = (int) MinMax(getManaPercent()*barLength, 0, barLength);
+                    String healthBarText = color + "|".repeat(healthBar) + "§7" + "|".repeat(barLength - healthBar);
+                    //String manaBarText = "§b" + "|".repeat(healthBar) + "§7" + "|".repeat(barLength - manaBar);
+                    String displayText = mainClass.getColor() + "[" + mainClass.getColorNick() + "]§r " + getDisplayName() + " §c" + scale(getHealth()) + "♥\n";
+                    if (getProduceGame().isInGame()) {
+                        displayText += "§e[" + getProduceGame().getGame().getDisplay() + "]";
+                    } else if (isAFK()) {
+                        displayText += "§8[AFK]";
+                    } else {
+                        displayText += healthBarText;
+                    }
+                    display.setText(displayText);
                 }
-            } else {
-                tickTask.cancel();
             }
         }, 20, 1);
-        tick5Task = SomTask.timer(() -> {
-            if (player.isOnline()) {
-                setMovementSpeed(getLastLocation().distance(getLocation()));
-                if (isPlayMode() && !isLoading()) {
-                    ClassType mainClass = classes.getMainClass();
-                    if (mainClass != null) {
-                        setLastLocation(getLocation());
+        tick5Task = SomTask.timerPlayer(this, () -> {
+            setMovementSpeed(getLastLocation().distance(getLocation()));
+            if (isPlayMode() && !isLoading()) {
+                ClassType mainClass = classes.getMainClass();
+                if (mainClass != null) {
+                    setLastLocation(getLocation());
+                    if (!isBE()) {
                         for (String entry : board.getEntries()) {
                             board.resetScores(entry);
                         }
                         ScoreKey.clear();
                         ScoreKey.add(decoLore("メル") + mel);
+
+                        if (Auction.Auctioning) {
+                            ScoreKey.addAll(Auction.TextLine);
+                        }
+
+                        if (!viewAmount.isEmpty()) {
+                            ScoreKey.add(decoSeparator("所持アイテム数"));
+                            viewAmount.forEach((id, tier) -> {
+                                SomItem item = ItemDataLoader.getItemData(id);
+                                item.setTier(tier);
+                                StringBuilder text = new StringBuilder("§7・§r" + item.getColorDisplay() + "§ex");
+                                itemInventory.getStack(item).ifPresentOrElse(stack -> text.append(stack.getAmount()), () -> text.append(0));
+                                ScoreKey.add(text.toString());
+                            });
+                        }
+                        if (gatheringMenu.isJoin()) {
+                            ScoreKey.add(decoSeparator("ギャザリングレベル"));
+                            for (GatheringMenu.Type type : GatheringMenu.Type.values()) {
+                                ScoreKey.add("§7・§e" + type.getDisplay() + "Lv" + gatheringMenu.getLevel(type) + " §a" + scale(gatheringMenu.getExpPercent(type)*100, 2) + "%");
+                            }
+                            ItemStack tool = player.getInventory().getItemInMainHand();
+                            if (CustomItemStack.hasCustomData(tool, "ToolExp")) {
+                                ScoreKey.add(decoSeparator("ツール性能"));
+                                ScoreKey.add(decoLore("ツール精錬値") + CustomItemStack.getCustomDataInt(tool, "ToolExp"));
+                            }
+                        }
+                        if (questMenu.hasTrackingQuest()) {
+                            QuestPhase questPhase = questMenu.getTrackingQuest().getNowPhase();
+                            ScoreKey.add(decoSeparator(questPhase.getDisplay()));
+                            ScoreKey.addAll(questPhase.sidebarLine(this));
+                        }
                         if (dungeonMenu.isInDungeon()) {
-                            Collection<PlayerData> member = new ArrayList<>(dungeonMenu.getDungeon().getMember());
-                            ScoreKey.add(decoSeparator("ダンジョン[" + dungeonMenu.getDungeon().getDifficulty() + "] (" + member.size() + "/5)"));
-                            for (PlayerData player : member) {
+                            DungeonInstance dungeon = dungeonMenu.getDungeon();
+                            ScoreKey.add(decoSeparator(dungeon.getMatchType().getDisplay() + "ダンジョン[" + dungeon.getDifficulty() + "]"));
+                            ScoreKey.add(decoLore("経過時間") + (dungeon.getStartTime() == 0 ? "0" : scale((System.currentTimeMillis()-dungeon.getStartTime())/1000.0, 2)) + "秒");
+                            ScoreKey.add(decoSeparator("ダンジョンメンバー (" + dungeon.getMember().size() + "/" + dungeon.getMatchType().getLimit() + ")"));
+                            for (PlayerData player : dungeon.getMember()) {
                                 ClassType playerClass = player.getClasses().getMainClass();
                                 ScoreKey.add("§7・" + player.getDisplayName() + " §a" + scale(player.getHealthPercent()*100) + "% " + playerClass.getColorNick() + " §eLv" + player.getClasses().getLevel(playerClass));
                             }
                         }
-
-                        synchronized (effect) {
-                            effect.values().removeIf(effect -> effect.getTime() <= 0);
-                            if (effect.size() > 0) {
-                                ScoreKey.add(decoSeparator("バフ・デバフ"));
-                                for (SomEffect effect : effect.values()) {
-                                    ScoreKey.add("§7・" + (effect.isBuff() ? "§e" : "§c") + effect.getDisplay() + "[" + effect.getStack() + "]§r §a" + scale(effect.getTime()) + "秒");
-                                }
-
+                        if (isInDefensiveBattle()) {
+                            DefensiveBattle defensiveBattle = getDefensiveBattle();
+                            ScoreKey.add(decoSeparator(defensiveBattle.getMatchType().getDisplay() + "防衛戦"));
+                            ScoreKey.add(decoLore("経過時間") + (defensiveBattle.getStartTime() == 0 ? "0" : scale((System.currentTimeMillis()-defensiveBattle.getStartTime())/1000.0, 2)) + "秒");
+                            ScoreKey.add(decoLore("Wave" + defensiveBattle.getWave()) + (defensiveBattle.getWaveStart() == 0 ? "0" : scale((System.currentTimeMillis()-defensiveBattle.getWaveStart())/1000.0, 2)) + "秒 §e[" + defensiveBattle.difficulty() + "]");
+                            ScoreKey.add(decoSeparator("防衛戦メンバー (" + defensiveBattle.getMember().size() + "/" + defensiveBattle.getMatchType().getLimit() + ")"));
+                            for (PlayerData player : defensiveBattle.getMember()) {
+                                ClassType playerClass = player.getClasses().getMainClass();
+                                ScoreKey.add("§7・" + player.getDisplayName() + " §a" + scale(player.getHealthPercent()*100) + "% " + playerClass.getColorNick() + " §eLv" + player.getClasses().getLevel(playerClass));
                             }
                         }
-
-                        int i = 15;
+                        if (!effect.isEmpty()) {
+                            ScoreKey.add(decoSeparator("バフ・デバフ"));
+                            for (SomEffect effect : effect.values()) {
+                                ScoreKey.add("§7・" + effect.getColorDisplay() + "[" + effect.getStack() + "]§r §a" + (effect.getTime() == -1 ? "" : (scale(effect.getTime()) + "秒")));
+                            }
+                        }
+                        int i = ScoreKey.size();
                         for (String scoreName : ScoreKey) {
                             Score sidebarScore = sidebarObject.getScore(scoreName);
                             sidebarScore.setScore(i);
                             i--;
-                            if (i < 1) break;
-                        }
-                        player.setPlayerListName(mainClass.getColor() + "[" + mainClass.getColorNick() + "]§r " + getDisplayName() + " §eLv" + getLevel());
-                        for (PlayerData playerData : PlayerData.getPlayerList()) {
-                            ClassType playerMainClass = playerData.getClasses().getMainClass();
-                            if (playerMainClass != null) {
-                                Player player = playerData.getPlayer();
-                                Team team = board.getPlayerTeam(player);
-                                if (team == null) {
-                                    team = board.registerNewTeam(player.getName());
-                                    team.addPlayer(player);
-                                }
-                                team.setPrefix(playerMainClass.getColor() + "[" + playerMainClass.getColorNick() + "]§r ");
-                                team.setSuffix(" §c" + scale(playerData.getHealth()) + "♥");
-                            }
                         }
                     }
-                }
-                if (evasionWait > 0) {
-                    evasionWait -= 5;
-                    if (evasionWait <= 0) {
-                        inventoryViewer.updateBar(true);
-                    }
-                }
-            } else {
-                tick5Task.cancel();
-            }
+                    player.setPlayerListName("§3[" + mapData.getSuffix() + "] " +  mainClass.getColor() + "[" + mainClass.getColorNick() + "]§r " + getDisplayName() + " §eLv" + getRawLevel());
 
+                    if (evasionWait > 0) {
+                        evasionWait -= 5;
+                        if (evasionWait <= 0) {
+                            inventoryViewer.updateBar(true);
+                        }
+                    }
+                }
+            }
         }, 20, 5);
 
-        secondTask = SomTask.timer(() -> {
-            if (player.isOnline()) {
-                if (movementSpeed == 0) {
-                    afkTime++;
-                } else {
-                    afkTime = 0;
-                }
-                if (isAFK()) {
-                    sendTitle("§7You Are AFK", "§a" + afkTime, 0, 25, 0);
-                }
-                addPlaytime(1);
-                tickEffect();
+        secondTask = SomTask.timerPlayer(this, () -> {
+            if (afkLocation.distanceXZ(getLocation()) < 1.0) {
+                afkTime++;
             } else {
-                secondTask.cancel();
+                afkLocation = getLocation();
+                afkTime = 0;
             }
+            if (isAFK() && !produceGame.getTyping().isStart()) {
+                sendTitle("§7You Are AFK", "§a" + afkTime, 0, 25, 0);
+            }
+
+            addPlaytime(1);
+            displayHolo();
         }, 20, 20);
 
         secondSyncTask = SomTask.syncTimer(() -> {
@@ -803,10 +1235,87 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
                 player.setFoodLevel((int) Math.ceil(MinMax(getMana()/getMaxMana(), 0, 1) * 20));
                 player.setLevel(classes.getLevel(mainClass));
                 player.setExp(MinMax(classes.getExpPercent(mainClass), 0.001f, 0.999f));
+                player.addPassenger(display);
+                for (Player player : SomCore.getPlayers()) {
+                    team.addPlayer(player);
+                }
+
+                if (setting.isViewSelfNamePlate()) {
+                    if (!player.canSee(getDisplayHolo())) {
+                        player.showEntity(SomCore.plugin(), getDisplayHolo());
+                    }
+                } else {
+                    if (player.canSee(getDisplayHolo())) {
+                        player.hideEntity(SomCore.plugin(), getDisplayHolo());
+                    }
+                }
+
+                if (isInCity()) {
+                    for (PlayerData playerData : PlayerData.getPlayerList()) {
+                        if (this != playerData) {
+                            show(playerData);
+                        }
+                    }
+                } else {
+                    Collection<PlayerData> member = getMember();
+                    for (PlayerData playerData : PlayerData.getPlayerList()) {
+                        if (this != playerData) {
+                            if (member.contains(playerData)) {
+                                show(playerData);
+                            } else {
+                                hide(playerData);
+                            }
+                        }
+                    }
+                }
             } else {
                 secondSyncTask.cancel();
+                display.remove();
             }
         }, 20, 20);
+
+        second30Task = SomTask.timerPlayer(this, () -> {
+            if (!isInCity()) {
+                if (hasEquipment(EquipSlot.AlchemyStone)) {
+                    if (getEquipment(EquipSlot.AlchemyStone) instanceof SomAlchemyStone stone && stone.getExp() > 0) {
+                        stone.addExp(-1);
+                        if (stone.getExp() == 0) updateStatus();
+                    } else {
+                        sendMessage("§e錬金石§aの§e精錬値§aが切れています", SomSound.Nope);
+                    }
+                }
+            }
+        }, 20, 30*20);
+    }
+
+    public void show(PlayerData playerData) {
+        if (!player.canSee(playerData.getPlayer())) {
+            player.showPlayer(SomCore.plugin(), playerData.getPlayer());
+        }
+        if (!player.canSee(playerData.getDisplayHolo())) {
+            player.showEntity(SomCore.plugin(), playerData.getDisplayHolo());
+        }
+        for (SomPet pet : playerData.getPetMenu().getSummon()) {
+            LivingEntity petEntity = pet.getLivingEntity();
+            if (!player.canSee(petEntity)) {
+                player.showEntity(SomCore.plugin(), petEntity);
+            }
+        }
+    }
+
+    public void hide(PlayerData playerData) {
+        if (player.canSee(playerData.getPlayer())) {
+            player.hidePlayer(SomCore.plugin(), playerData.getPlayer());
+        }
+        if (player.canSee(playerData.getDisplayHolo())) {
+            player.hideEntity(SomCore.plugin(), playerData.getDisplayHolo());
+        }
+        for (SomPet pet : playerData.getPetMenu().getSummon()) {
+            LivingEntity petEntity = pet.getLivingEntity();
+            if (player.canSee(petEntity)) {
+                player.hideEntity(SomCore.plugin(), petEntity);
+            }
+        }
     }
 
     public String getDisplayColor() {
@@ -820,12 +1329,28 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
     }
 
     public void teleport(Location location, Vector vector) {
+        if (isLocationLock()) setLocationLock(location);
+        if (isDeath()) {
+            setPlayerSpawn(location);
+            deathLocation = new CustomLocation(location);
+        }
         SomTask.sync(() -> {
+            List<Entity> returnPassenger = new ArrayList<>();
             for (Entity passenger : player.getPassengers()) {
                 player.removePassenger(passenger);
+                if (passenger.getScoreboardTags().contains(Config.SomParticleAddress)) {
+                    returnPassenger.add(passenger);
+                }
+            }
+            for (SomPet pet : petMenu.getSummon()) {
+                pet.getLivingEntity().teleport(location);
+                pet.setVelocity(vector);
             }
             player.teleport(location);
             player.setVelocity(vector);
+            for (Entity passenger : returnPassenger) {
+                player.addPassenger(passenger);
+            }
         });
     }
 
@@ -877,9 +1402,13 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
         this.playtime += playtime;
     }
 
+    public boolean isTutorialClear() {
+        return classes.isValidClass() && getQuestMenu().getClearQuest().contains("ようこそアライネへ");
+    }
+
     private boolean saving = false;
     private boolean loading = true;
-    private String dataBase = "PlayerData";
+    public static final String Table = "playerData";
 
     public boolean isSaving() {
         return saving;
@@ -894,7 +1423,7 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
     }
 
     public void saveSql() {
-        saveSql(dataBase, true);
+        saveSql(Table, true);
     }
 
     public void saveSql(String table, boolean check) {
@@ -917,32 +1446,34 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
     }
 
     private void save(String table, String uuid) {
-        if (getClasses().getMainClass() != null && getQuestMenu().getClearQuest().contains("ようこそアライネへ")) {
+        if (isTutorialClear()) {
             saving = true;
-            SomSQL.setSql(table, "UUID", uuid, "PlayTime", getPlaytime());
-            SomSQL.setSql(table, "UUID", uuid, "DisplayName", player.getName());
             long startTime = System.currentTimeMillis();
+
+            SomSQL.setSql(table, "UUID", uuid, "PlayTime", getPlaytime());
+            SomSQL.setSql(table, "UUID", uuid, "Username", player.getName());
+            SomSQL.setSql(table, "UUID", uuid, "Mel", getMel());
+
             SomJson json = new SomJson();
-            Location saveLocation = player.getLocation();
-            json.set("Location.world", saveLocation.getWorld().getName());
-            json.set("Location.x", saveLocation.x());
-            json.set("Location.y", saveLocation.y());
-            json.set("Location.z", saveLocation.z());
-            json.set("Mel", getMel());
 
             json.set("MainClass", getClasses().getMainClass().toString());
-            for (ClassType classType : ClassType.values()) {
-                String path = "Classes." + classType;
-                json.set(path + ".Level", getClasses().getLevel(classType));
-                json.set(path + ".Exp", getClasses().getExp(classType));
-                for (int i = 1; i < getClasses().getSkillGroup(classType).size(); i++) {
-                    json.set(path + ".SkillGroup.Slot-" + i, getClasses().getSkillGroup(classType).get(i).getId());
-                }
-                for (int i = 0; i < palletMenu.getPallet(classType).length; i++) {
-                    SomSkill skill = palletMenu.getPallet(classType)[i];
-                    if (skill != null) json.set(path + ".Skill-" + i, skill.getId());
-                }
-            }
+            classes.save();
+//            for (ClassType classType : ClassType.values()) {
+//                String path = "Classes." + classType;
+//                json.set(path + ".Level", getClasses().getLevel(classType));
+//                json.set(path + ".Exp", getClasses().getExp(classType));
+//                for (int i = 1; i < getClasses().getSkillGroup(classType).size(); i++) {
+//                    json.set(path + ".SkillGroup.Slot-" + i, getClasses().getSkillGroup(classType).get(i).getId());
+//                }
+//                for (int i = 0; i < palletMenu.getPallet(classType).length; i++) {
+//                    SomSkill skill = palletMenu.getPallet(classType)[i];
+//                    if (skill != null) json.set(path + ".Skill-" + i, skill.getId());
+//                }
+//                for (int i = 0; i < palletMenu.getItemPallet().length; i++) {
+//                    SomItem item = palletMenu.getItemPallet()[i];
+//                    if (item != null) json.set(path + ".Item-" + i, item.toJson());
+//                }
+//            }
 
             for (EquipSlot equipSlot : EquipSlot.values()) {
                 if (getEquipment(equipSlot) != null) {
@@ -967,22 +1498,19 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
                 questJson.set("Id", id);
                 questJson.set("PhaseIndex", somQuest.getPhaseIndex());
                 int i = 0;
-                for (QuestPhase phase : somQuest.getQuestData().getPhase()) {
+                for (QuestPhase phase : somQuest.getPhase()) {
                     questJson.set("Phase-" + i, phase.toJson());
                     i++;
                 }
                 json.addArray("OrderQuest", questJson);
             });
-            for (String clearQuest : getQuestMenu().getClearQuest()) {
-                json.addArray("ClearQuest", clearQuest);
-            }
+            getQuestMenu().getClearQuestTime().forEach((questId, time) -> json.addArray("ClearQuest", questId + "," + time.format(DateFormat)));
 
             json.set("Statistics", getStatistics().save());
             json.set("Setting", getSetting().save());
             json.set("Gathering", getGatheringMenu().save());
 
             SomSQL.setSql(table, "UUID", uuid, "Json", json.toString());
-            SomSQL.setSql(table, "UUID", uuid, "PlayTime", getPlaytime());
             long endTime = System.currentTimeMillis();
             sendMessage("§eプレイヤーデータ§aを§bセーブ§aしました §e(" + scaleDouble(json.toString().getBytes(StandardCharsets.UTF_8).length / 1024f) + "KiB/" + (endTime - startTime) + "ms)", SomSound.Tick);
             saving = false;
@@ -994,7 +1522,7 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
     }
 
     public void loadSql() {
-        loadSql(dataBase, player.getUniqueId().toString());
+        loadSql(Table, player.getUniqueId().toString());
     }
 
     public void loadSql(String table, String uuid) {
@@ -1014,37 +1542,46 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
             setPlaytime(SomSQL.getLong(table, "UUID", uuid, "PlayTime"));
             SomJson json = new SomJson(SomSQL.getString(table, "UUID", uuid, "Json"));
             dataSize = json.toString().getBytes(StandardCharsets.UTF_8).length/1024f;
-            setMel(json.getInt("Mel", mel));
+            setMel(SomSQL.getInt(table, "UUID", uuid, "Mel"));
 
             if (json.has("MainClass")) getClasses().setMainClass(ClassType.valueOf(json.getString("MainClass")));
-            for (ClassType classType : ClassType.values()) {
-                SkillGroup first = getClasses().getSkillGroup(classType).get(0);
-                getClasses().getSkillGroup(classType).clear();
-                getClasses().getSkillGroup(classType).add(first);
-                String path = "Classes." + classType;
-                getClasses().setLevel(classType, json.getInt(path + ".Level", 1));
-                getClasses().setExp(classType, json.getInt(path + ".Exp", 0));
-                for (int i = 1; i < Classes.UnlockSkillGroupSlot.length; i++) {
-                    try {
-                        if (json.has(path + ".SkillGroup.Slot-" + i)) {
-                            SkillGroup group = SkillGroupLoader.getSkillGroup(json.getString(path + ".SkillGroup.Slot-" + i));
-                            getClasses().getSkillGroup(classType).add(group);
-                        }
-                    } catch (Exception ignore) {}
-                }
-                for (int i = 0; i < palletMenu.getPallet(classType).length; i++) {
-                    try {
-                        String key = path + ".Skill-" + i;
-                        if (json.has(key)) palletMenu.setPallet(classType, i, skillManager.getSkill(json.getString(key)));
-                    } catch (Exception ignore) {}
-                }
-            }
+            classes.load();
+//            for (ClassType classType : ClassType.values()) {
+//                SkillGroup first = getClasses().getSkillGroup(classType).get(0);
+//                getClasses().getSkillGroup(classType).clear();
+//                getClasses().getSkillGroup(classType).add(first);
+//                String path = "Classes." + classType;
+//                getClasses().setLevel(classType, json.getInt(path + ".Level", 1));
+//                getClasses().setExp(classType, json.getInt(path + ".Exp", 0));
+//                for (int i = 1; i < Classes.UnlockSkillGroupSlot.length; i++) {
+//                    try {
+//                        if (json.has(path + ".SkillGroup.Slot-" + i)) {
+//                            SkillGroup group = SkillGroupLoader.getSkillGroup(json.getString(path + ".SkillGroup.Slot-" + i));
+//                            getClasses().getSkillGroup(classType).add(group);
+//                        }
+//                    } catch (Exception ignore) {}
+//                }
+//                for (int i = 0; i < palletMenu.getPallet(classType).length; i++) {
+//                    try {
+//                        String key = path + ".Skill-" + i;
+//                        if (json.has(key)) palletMenu.setPallet(classType, i, skillManager.getSkill(json.getString(key)));
+//                    } catch (Exception ignore) {}
+//                }
+//                for (int i = 0; i < palletMenu.getItemPallet().length; i++) {
+//                    try {
+//                        String key = path + ".Item-" + i;
+//                        if (json.has(key)) palletMenu.setItemPallet(i, (SomPotion) SomItem.fromJson(json.getSomJson(key)));
+//                    } catch (Exception ignore) {}
+//                }
+//            }
 
             equipment.clear();
+            if (json.has("Item.AlchemyStone")) equipment.put(EquipSlot.AlchemyStone, (SomEquip) SomItem.fromJson(json.getSomJson("Item.AlchemyStone")));
+            if (json.has("Item.Wish")) equipment.put(EquipSlot.Amulet, (SomEquip) SomItem.fromJson(json.getSomJson("Item.Wish")));
             for (EquipSlot equipSlot : EquipSlot.values()) {
                 if (json.has("Item.Equipment." + equipSlot)) {
                     try {
-                        equipment.put(equipSlot, (SomEquipment) SomItem.fromJson(json.getSomJson("Item.Equipment." + equipSlot)));
+                        equipment.put(equipSlot, (SomEquip) SomItem.fromJson(json.getSomJson("Item.Equipment." + equipSlot)));
                     } catch (Exception e) {
                         e.printStackTrace();
                         Log("§c" + e.getMessage());
@@ -1083,25 +1620,34 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
 
             getQuestMenu().getQuests().clear();
             for (String questData : json.getList("OrderQuest")) {
-                SomJson questJson = new SomJson(questData);
-                SomQuest somQuest = new SomQuest(QuestDataLoader.getQuestData(questJson.getString("Id")));
-                somQuest.setPhaseIndex(questJson.getInt("PhaseIndex", 0));
-                int i = 0;
-                for (QuestPhase questPhase : somQuest.getQuestData().getPhase()) {
-                    try {
-                        QuestPhase newPhase = questPhase.fromJson(questJson.getSomJson("Phase-" + i));
-                        somQuest.setPhase(i, newPhase);
-                        i++;
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        Log("§c" + e.getMessage());
+                try {
+                    SomJson questJson = new SomJson(questData);
+                    SomQuest somQuest = new SomQuest(QuestDataLoader.getQuestData(questJson.getString("Id")));
+                    somQuest.setPhaseIndex(questJson.getInt("PhaseIndex", 0));
+                    int i = 0;
+                    for (QuestPhase questPhase : somQuest.getQuestData().getPhase()) {
+                        try {
+                            QuestPhase newPhase = questPhase.fromJson(questJson.getSomJson("Phase-" + i));
+                            somQuest.setPhase(i, newPhase);
+                            i++;
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            Log("§c" + e.getMessage());
+                        }
                     }
+                    getQuestMenu().addQuest(somQuest);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-                getQuestMenu().addQuest(somQuest);
             }
             getQuestMenu().getClearQuest().clear();
             for (String clearQuest : json.getStringList("ClearQuest")) {
-                getQuestMenu().addClearQuest(clearQuest);
+                String[] split = clearQuest.split(",");
+                try {
+                    getQuestMenu().addClearQuest(split[0], LocalDateTime.parse(split[1], DateFormat));
+                } catch (Exception e) {
+                    getQuestMenu().addClearQuest(split[0], LocalDateTime.now().minusDays(1));
+                }
             }
 
             getStatistics().load(json.getSomJson("Statistics"));
@@ -1119,12 +1665,14 @@ public class PlayerData implements SwordofMagic10.Entity.SomEntity, SomGuild.Mem
             heal();
             SomTask.sync(() -> {
                 player.setGameMode(GameMode.ADVENTURE);
-                if (getQuestMenu().getClearQuest().contains("ようこそアライネへ")) {
+                if (isTutorialClear()) {
                     if (SpawnLocation.distance(player.getLocation()) > 256) teleport(SomCore.SpawnLocation);
                 } else {
                     teleport(Tutorial.SpawnLocation);
                 }
             });
+        } else {
+            setting.applyNightVision(true);
         }
     }
 }

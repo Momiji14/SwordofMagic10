@@ -18,13 +18,13 @@ public class DiscernEvil extends SomSkill {
     @Override
     public String active() {
         SomRay ray = SomRay.rayLocationEntity(playerData, getReach(), 0.5, playerData.getTargets(), false);
-        SomParticle particle = new SomParticle(Color.PURPLE);
-        SomParticle particle2 = new SomParticle(Particle.SPELL_WITCH).setRandomVector().setSpeed(0.2f);
+        SomParticle particle = new SomParticle(Color.PURPLE, playerData);
+        SomParticle particle2 = new SomParticle(Particle.SPELL_WITCH, playerData).setRandomVector().setSpeed(0.2f);
         if (ray.isHitEntity()) {
             particle.line(playerData.getViewers(), playerData.getEyeLocation(), ray.getHitPosition());
             particle2.spawn(playerData.getViewers(), ray.getHitPosition());
             for (SomEffect effect : ray.getHitEntity().getEffect().values()) {
-                if (!effect.isBuff() && !effect.isExtend()) {
+                if (!effect.isBuff() && !effect.isExtend() && effect.getRank() != SomEffect.Rank.Impossible) {
                     effect.addTime((int) (Math.max(getParameter(SkillParameterType.DiscernEvil), effect.getTime() * getParameter(SkillParameterType.DiscernEvilMin))));
                     effect.setExtend(true);
                     playerData.sendMessage(ray.getHitEntity().getDisplayName() + "§aの§c" + effect.getDisplay() + "§aを§c延長§aしました");

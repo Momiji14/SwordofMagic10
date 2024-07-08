@@ -22,13 +22,13 @@ public class Ritirarsi extends SomSkill {
         double radius = getRadius();
         double damage = getDamage();
         CustomLocation center = playerData.getLocation();
-        for (SomEntity entity : SomEntity.nearSomEntity(playerData.getTargets(), center, radius)) {
-            Damage.makeDamage(playerData, entity, DamageEffect.Fire, DamageOrigin.ATK, damage);
-        }
-        SomParticle particle = new SomParticle(Particle.LAVA);
+        SomParticle particle = new SomParticle(Particle.LAVA, playerData);
         particle.circleFill(playerData.getViewers(), center, radius);
         playerData.setVelocity(playerData.getDirection().normalize().multiply(-1).setY(0.5));
         SomSound.Slash.play(playerData.getViewers(), playerData.getSoundLocation());
+        for (SomEntity entity : SomEntity.nearSomEntity(playerData.getTargets(), center, radius)) {
+            Damage.makeDamage(playerData, entity, DamageEffect.Fire, DamageOrigin.ATK, damage);
+        }
         return null;
     }
 }

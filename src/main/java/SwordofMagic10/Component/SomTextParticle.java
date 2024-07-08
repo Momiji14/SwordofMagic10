@@ -6,7 +6,7 @@ import org.bukkit.entity.Display;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.TextDisplay;
 
-public class SomTextParticle extends SomDisplayParticle{
+public class SomTextParticle extends SomDisplayParticle {
     private final String text;
     private Color color = Color.fromARGB(0, 0, 0, 0);
     private boolean seeThrough = true;

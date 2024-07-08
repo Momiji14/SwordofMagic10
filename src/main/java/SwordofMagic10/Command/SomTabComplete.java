@@ -20,7 +20,7 @@ public interface SomTabComplete extends TabCompleter {
             List<String> data = PlayerTabComplete(player, PlayerData.get(player), command, args);
             if (data != null) list.addAll(data);
         }
-        if (args.length > 0) list.removeIf(tab -> !tab.contains(args[args.length-1]));
+        if (args.length > 0) list.removeIf(tab -> !tab.toLowerCase().contains(args[args.length-1].toLowerCase()));
         return list;
     }
 

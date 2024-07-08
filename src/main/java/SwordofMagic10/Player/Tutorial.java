@@ -15,7 +15,7 @@ public class Tutorial {
     public static final Location GateLocation = new Location(SomCore.World, -17.5, 68, 35.5, 180, 0);
     public static final Location NextLocation = new Location(SomCore.World, 154.5, -25, 79.5, 90, 0);
     public static void run() {
-        SomParticle particle = new SomParticle(Particle.FIREWORKS_SPARK);
+        SomParticle particle = new SomParticle(Particle.FIREWORKS_SPARK, null);
         new BukkitRunnable() {
             double i = 0;
             @Override
@@ -30,7 +30,7 @@ public class Tutorial {
                     particle.setVector(SomParticle.VectorUp);
                     particle.setSpeed(0.15f);
                     for (Location loc : locations) {
-                        particle.spawn(SomEntity.nearPlayer(PlayerData.getPlayerList(), GateLocation, 32), loc);
+                        particle.spawn(SomEntity.nearPlayer(PlayerData.getPlayerListNonAFK(), GateLocation, 32), loc);
                     }
                     i += 0.05;
                 }

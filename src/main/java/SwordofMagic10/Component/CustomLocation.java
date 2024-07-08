@@ -6,6 +6,7 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 import static SwordofMagic10.Component.Function.VectorFromYawPitch;
+import static SwordofMagic10.Component.Function.randomDouble;
 
 public class CustomLocation extends Location {
     public CustomLocation(World world, double x, double y, double z) {
@@ -35,6 +36,11 @@ public class CustomLocation extends Location {
 
     public CustomLocation addXZ(double x, double z) {
         add(x, 0, z);
+        return this;
+    }
+
+    public CustomLocation randomRadius(double radius) {
+        addXZ(randomDouble(-radius, radius),randomDouble(-radius, radius));
         return this;
     }
 
@@ -80,6 +86,11 @@ public class CustomLocation extends Location {
 
     public CustomLocation addYaw(float yaw) {
         setYaw(getYaw() + yaw);
+        return this;
+    }
+
+    public CustomLocation addPitch(float pitch) {
+        setPitch(getPitch() + pitch);
         return this;
     }
 

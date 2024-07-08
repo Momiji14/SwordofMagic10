@@ -22,7 +22,7 @@ public class BulletBit extends SomSkill {
     }
 
     public static double headShot(SomEntity shooter, SomRay ray, SomEntity entity, double damage, double headDamage) {
-        if (ray.isHeadShot(entity)) {
+        if (ray.isHeadShot(entity) || shooter.hasEffect("WeakPoint")) {
             damage += headDamage;
             SomSound.HeadShot.play(shooter);
         }
@@ -37,9 +37,9 @@ public class BulletBit extends SomSkill {
         display.setRightRotation(-90, 0, 0);
         display.setBillboard(Display.Billboard.FIXED);
         display.setScale(0, 0, 0);
-        display.addAnimation(display.clone().setScale(5, 2, 2).setTime(5));
-        display.addAnimation(new AnimationDelay(20));
-        display.addAnimation(display.clone().setScale(0, 0, 0).setTime(5));
+        display.addAnimation(display.clone().setScale(5, 2, 2).setTime(3));
+        display.addAnimation(new AnimationDelay(10));
+        display.addAnimation(display.clone().setScale(0, 0, 0).setTime(3));
         display.spawn(playerData.getViewers(), location);
         SomTask.delay(() -> {
             for (SomParticle somParticle : particle) {
@@ -47,7 +47,7 @@ public class BulletBit extends SomSkill {
             }
             if (target != null) Damage.makeDamage(playerData, target, DamageEffect.None, DamageOrigin.ATK, headShot(playerData, ray, damage, headDamage));
             SomSound.Handgun.play(playerData.getViewers(), location);
-        }, 10);
+        }, 5);
         return display;
     }
 
@@ -58,7 +58,7 @@ public class BulletBit extends SomSkill {
     @Override
     public String active() {
         SomRay ray = SomRay.rayLocationEntity(playerData, getReach(), 0.1, playerData.getTargets(), false);
-        Process(playerData, ray.getHitEntity(), ray, getDamage(), getHeadDamage(), new SomParticle(Particle.CRIT));
+        Process(playerData, ray.getHitEntity(), ray, getDamage(), getHeadDamage(), new SomParticle(Particle.CRIT, playerData));
         return null;
     }
 }

@@ -16,11 +16,19 @@ commands:
     permission: som10.reload
     description: description
     usage: /<command>
+  SomRestart:
+    permission: som10.dev
+    description: description
+    usage: /<command>
   Save:
     permission: som10.dev
     description: description
     usage: /<command>
   Load:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  CloneLoad:
     permission: som10.dev
     description: description
     usage: /<command>
@@ -58,6 +66,38 @@ commands:
     permission: som10.dev
     description: description
     usage: /<command>
+  ClearCT:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  FlySpeed:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  RaidEnter:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  GetEffect:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  AFK:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  Cast:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  TPMap:
+    permission: som10.dev
+    description: description
+    usage: /<command>
+  PlayerVote:
+    permission: som10.dev
+    description: description
+    usage: /<command>
 
   Menu:
     aliases: m
@@ -79,6 +119,14 @@ commands:
     aliases: pd
     description: description
     usage: /<command>
+  ParticleDensityOther:
+    aliases: pdo
+    description: description
+    usage: /<command>
+  ParticleDensityEnemy:
+    aliases: pde
+    description: description
+    usage: /<command>
   Death:
     description: description
     usage: /<command>
@@ -88,5 +136,76 @@ commands:
     usage: /<command>
   Help:
     aliases: h
+    description: description
+    usage: /<command>
+  DamageLog:
+    description: description
+    usage: /<command>
+  ExpLog:
+    description: description
+    usage: /<command>
+  ItemLog:
+    description: description
+    usage: /<command>
+  BuffLog:
+    description: description
+    usage: /<command>
+  SkillLog:
+    description: description
+    usage: /<command>
+  QuickCast:
+    description: description
+    usage: /<command>
+  PvP:
+    description: description
+    usage: /<command>
+  Trade:
+    description: description
+    usage: /<command>
+  PlayerInfo:
+    aliases: pi
+    description: description
+    usage: /<command>
+  Auction:
+    description: description
+    usage: /<command>
+  EffectInfo:
+    aliases: ei
+    description: description
+    usage: /<command>
+  GatheringDrop:
+    aliases: gd
+    description: description
+    usage: /<command>
+  ViewItem:
+    aliases: vi
+    description: description
+    usage: /<command>
+  Market:
+    description: description
+    usage: /<command>
+  Order:
+    description: description
+    usage: /<command>
+  ViewAmount:
+    aliases: va
+    description: description
+    usage: /<command>
+  ReqClassExp:
+    description: description
+    usage: /<command>
+  ReqGatheringExp:
+    description: description
+    usage: /<command>
+  SearchSpawner:
+    description: description
+    usage: /<command>
+  PetName:
+    description: description
+    usage: /<command>
+  Favorite:
+    description: description
+    usage: /<command>
+  PushStorage:
     description: description
     usage: /<command>

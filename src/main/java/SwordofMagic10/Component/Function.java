@@ -13,6 +13,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.util.Vector;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -22,7 +23,11 @@ import java.util.regex.Pattern;
 
 public class Function {
 
-    private static final Random random = new Random();
+    private static final SecureRandom random = new SecureRandom();
+
+    public static boolean randomBool() {
+        return random.nextBoolean();
+    }
     public static int randomInt(int min, int max) {
         return random.nextInt(min, max);
     }
@@ -183,6 +188,16 @@ public class Function {
         }
     }
 
+    public static void broadcast(SomText text) {
+        broadcast(text, null);
+    }
+
+    public static void broadcast(SomText text, SomSound somSound) {
+        for (PlayerData playerData : PlayerData.getPlayerList()) {
+            playerData.sendSomText(text, somSound);
+        }
+    }
+
     public static Vector VectorFromYawPitch(float yawData, float pitchData) {
         double pitch = (pitchData + 90) * Math.PI / 180;
         double yaw = (yawData + 90) * Math.PI / 180;
@@ -252,8 +267,8 @@ public class Function {
         return (int) Math.floor(angle * 360 / (2 * Math.PI));
     }
 
-    public static Location createLocation(double x, double y, double z, float yaw, float pitch) {
-        return new Location(SomCore.World, x + (x >= 0 ? 0.5 : -0.5), y, z + (z >= 0 ? 0.5 : -0.5), yaw, pitch);
+    public static CustomLocation createLocation(double x, double y, double z, float yaw, float pitch) {
+        return new CustomLocation(SomCore.World, x + (x >= 0 ? 0.5 : -0.5), y, z + (z >= 0 ? 0.5 : -0.5), yaw, pitch);
     }
 
     public static String BoolText(boolean bool) {

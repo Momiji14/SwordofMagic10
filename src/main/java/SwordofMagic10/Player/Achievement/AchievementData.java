@@ -1,7 +1,9 @@
 package SwordofMagic10.Player.Achievement;
 
+import SwordofMagic10.Component.CustomItemStack;
 import org.bukkit.Material;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class AchievementData {
@@ -11,7 +13,7 @@ public class AchievementData {
     private Material icon;
     private List<String> lore;
     private boolean isHide;
-    private List<String> animation;
+    private final List<Frame> animation = new ArrayList<>();
 
     public String getId() {
         return id;
@@ -53,11 +55,34 @@ public class AchievementData {
         isHide = hide;
     }
 
-    public List<String> getAnimation() {
+    public List<Frame> getAnimation() {
         return animation;
     }
 
     public void setAnimation(List<String> animation) {
-        this.animation = animation;
+        for (String str : animation) {
+            String[] split = str.split(",");
+            int tick = 0;
+            if (split.length > 1) {
+                String[] split2 = split[1].split(":");
+                switch (split2[0]) {
+                    case "Tick" -> tick = Integer.parseInt(split2[1]);
+                }
+                this.animation.add(new Frame(split[0], tick));
+            }
+        }
     }
+
+    public CustomItemStack viewItem() {
+        CustomItemStack item = new CustomItemStack(icon).setCustomData("Achievement", id);
+        item.setDisplay(getDisplay());
+        item.addLore(getLore());
+        item.addSeparator("アニメーション");
+        for (Frame frame : getAnimation()) {
+            item.addLore(frame.animation());
+        }
+        return item;
+    }
+
+    public record Frame(String animation, int tick) {}
 }

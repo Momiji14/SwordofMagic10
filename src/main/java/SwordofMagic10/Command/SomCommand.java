@@ -10,7 +10,14 @@ import org.jetbrains.annotations.NotNull;
 public interface SomCommand extends CommandExecutor {
     @Override
     default boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
-        if (sender instanceof Player player && PlayerCommand(player, PlayerData.get(player), args)) return true;
+        if (sender instanceof Player player) {
+            PlayerData playerData = PlayerData.get(player);
+            if (playerData.isTutorialClear()) {
+                if (PlayerCommand(player, playerData, args)) {
+                    return true;
+                }
+            }
+        }
         return Command(sender, args);
     }
 

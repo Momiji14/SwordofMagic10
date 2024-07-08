@@ -2,10 +2,8 @@ package SwordofMagic10.Player.Skill;
 
 public enum SkillParameterType {
     Damage("ダメージ", "", "%", 0, 100),
-    DamageResist("ダメージ軽減", "", "%", 0, 100),
     HeadDamage("ヘッドショット", "+", "%", 0, 100),
     Heal("ヒール", "", "%", 0, 100),
-    Hate("ヘイト", "", "%", 0, 100),
     Reach("射程", "", "m", 1),
     Radius("範囲", "", "m", 1),
     Angle("角度", "", "°", 0),
@@ -14,11 +12,13 @@ public enum SkillParameterType {
     Percent("確率", "", "%", 0, 100),
     Count("回数", "", "回", 0, 1),
     ManaPasser("マナ供給", "", "%", 0, 100),
-    DivineMight("加算割合", "", "", 0, 100),
+    DivineMight("加算割合", "", "%", 0, 100),
     DivineMightMin("最低加算", "", "秒", 1, 1),
-    DiscernEvil("加算割合", "", "", 0, 100),
+    DiscernEvil("加算割合", "", "%", 0, 100),
     DiscernEvilMin("最低加算", "", "秒", 1, 1),
-    HarmonyPreetable("追加ダメージ", "", "%", 0, 100),
+    HarmonyPreetable("追加ダメージ", "+", "%", 0, 100),
+    FireBlindly("追加ダメージ", "+", "%", 0, 100),
+    Pass("短縮割合", "-", "%", 0, 100),
     ;
 
     private final String display;

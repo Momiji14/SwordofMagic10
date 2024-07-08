@@ -2,6 +2,9 @@ package SwordofMagic10.Item;
 
 import SwordofMagic10.Entity.EquipSlot;
 
+import static org.bukkit.Material.SOUL_LANTERN;
+import static org.bukkit.Material.WHITE_TERRACOTTA;
+
 public enum EquipmentCategory {
     Sword("斬剣", EquipSlot.MainHand),
     Rod("魔杖", EquipSlot.MainHand),
@@ -13,9 +16,12 @@ public enum EquipmentCategory {
     Legs("腰鎧", EquipSlot.Legs),
     Boots("靴鎧", EquipSlot.Boots),
 
-    Amulet("願封", EquipSlot.Amulet),
     Trinket("攻飾", EquipSlot.OffHand),
     Shield("守盾", EquipSlot.OffHand),
+
+    AlchemyStone("錬金石", EquipSlot.AlchemyStone),
+    Amulet("アミュレット", EquipSlot.Amulet),
+    None("未分類", null)
     ;
 
     private final String display;

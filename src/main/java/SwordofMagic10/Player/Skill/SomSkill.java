@@ -3,6 +3,7 @@ package SwordofMagic10.Player.Skill;
 import SwordofMagic10.Component.CustomItemStack;
 import SwordofMagic10.Entity.SomEntity;
 import SwordofMagic10.Entity.StatusType;
+import SwordofMagic10.Player.Classes.Classes;
 import SwordofMagic10.Player.PlayerData;
 
 import static SwordofMagic10.Component.Function.decoLore;
@@ -49,22 +50,28 @@ public abstract class SomSkill extends SkillData {
 
     @Override
     public int getCastTime() {
-        return (int) Math.ceil(super.getCastTime() / (1+ playerData.getStatus(StatusType.CastTime)*0.01));
+        return (int) Math.ceil(super.getCastTime() * (1.0/playerData.getStatus(StatusType.CastTime)));
     }
 
     @Override
     public int getRigidTime() {
-        return (int) Math.ceil(super.getRigidTime() / (1+ playerData.getStatus(StatusType.RigidTime)*0.01));
+        return (int) Math.ceil(super.getRigidTime() * (1.0/playerData.getStatus(StatusType.RigidTime)));
     }
 
     @Override
     public int getCoolTime() {
-        return (int) Math.ceil(super.getCoolTime() / (1+ playerData.getStatus(StatusType.CoolTime)*0.01));
+        return (int) Math.ceil(super.getCoolTime() * (1.0/playerData.getStatus(StatusType.CoolTime)));
     }
+
+    public int calcCoolTime(int coolTime) {
+        return (int) Math.ceil(coolTime * 20 * (1.0/playerData.getStatus(StatusType.CoolTime)));
+    }
+
 
     public boolean cast() {
         return true;
     }
+    public void castFirstTick() {}
     public abstract String active();
 
     public CustomItemStack viewItem(int level) {
@@ -76,6 +83,12 @@ public abstract class SomSkill extends SkillData {
             double value = getParameter(type);
             if (value != 0) {
                 item.addLore(decoLore(type.getDisplay()) + type.getPrefix() + scale(value * type.getDisplayMultiply(), type.getDigit()) + type.getSuffix());
+            }
+        }
+        for (StatusType statusType : StatusType.values()) {
+            double value = getStatus(statusType);
+            if (value != 0) {
+                item.addLore(decoLore(statusType.getDisplay()) + scale(value*100, true) + "%");
             }
         }
         item.addLore(decoLore("消費マナ") + scale(getManaCost(level)));

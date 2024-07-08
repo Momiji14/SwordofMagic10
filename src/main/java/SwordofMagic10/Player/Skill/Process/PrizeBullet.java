@@ -19,14 +19,9 @@ public class PrizeBullet extends SomSkill {
         super(playerData);
     }
 
-    private boolean trigger = false;
     @Override
-    public boolean cast() {
-        if (!trigger) {
-            trigger = true;
-            SomSound.Tick.play(playerData.getViewers(), playerData.getSoundLocation());
-        }
-        return super.cast();
+    public void castFirstTick() {
+        SomSound.Tick.play(playerData.getViewers(), playerData.getSoundLocation());
     }
 
     @Override
@@ -35,12 +30,11 @@ public class PrizeBullet extends SomSkill {
         for (SomEntity entity : ray.getHitEntities()) {
             Damage.makeDamage(playerData, entity, DamageEffect.None, DamageOrigin.ATK, headShot(playerData, ray, entity, getDamage(), getHeadDamage()));
         }
-        SomParticle particle = new SomParticle(Particle.CRIT);
-        SomParticle particle2 = new SomParticle(Particle.CRIT_MAGIC);
+        SomParticle particle = new SomParticle(Particle.CRIT, playerData);
+        SomParticle particle2 = new SomParticle(Particle.CRIT_MAGIC, playerData);
         particle.line(playerData.getViewers(), playerData.getHandLocation(), ray.getOriginPosition(), 0.35);
         particle2.line(playerData.getViewers(), playerData.getHandLocation(), ray.getOriginPosition(), 0.35);
         SomSound.Handgun.play(playerData.getViewers(), playerData.getSoundLocation());
-        trigger = false;
         return null;
     }
 }

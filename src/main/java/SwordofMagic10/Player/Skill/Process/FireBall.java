@@ -23,14 +23,14 @@ public class FireBall extends SomSkill {
         double radius = getRadius();
         double damage = getDamage();
         center.add(center.getDirection().multiply(radius));
+        SomParticle particle = new SomParticle(Particle.FLAME, playerData);
+        particle.line(playerData.getViewers(), playerData.getHandLocation(), ray.getOriginPosition());
+        particle.sphere(playerData.getViewers(), ray.getOriginPosition(), radius);
+        SomSound.Fire.play(playerData.getViewers(), playerData.getSoundLocation());
         for (SomEntity victim : SomEntity.nearSomEntity(playerData.getTargets(), center, radius)) {
             Damage.makeDamage(playerData, victim, DamageEffect.Fire, DamageOrigin.MAT, damage);
             SomTask.wait(50);
         }
-        SomParticle particle = new SomParticle(Particle.FLAME);
-        particle.line(playerData.getViewers(), playerData.getHandLocation(), ray.getOriginPosition());
-        particle.sphere(playerData.getViewers(), ray.getOriginPosition(), radius);
-        SomSound.Fire.play(playerData.getViewers(), playerData.getSoundLocation());
         return null;
     }
 }

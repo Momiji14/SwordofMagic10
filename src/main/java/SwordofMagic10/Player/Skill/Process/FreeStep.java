@@ -15,10 +15,10 @@ public class FreeStep extends SomSkill {
 
     @Override
     public String active() {
-        playerData.addEffect(SomEffect.List.Invincible.getEffect());
+        playerData.addEffect(SomEffect.List.Invincible.getEffect(), playerData);
         SomEffect effect = new SomEffect(this, true);
-        playerData.addEffect(effect);
-        SomParticle particle = new SomParticle(Color.AQUA);
+        playerData.addEffect(effect, playerData);
+        SomParticle particle = new SomParticle(Color.AQUA, playerData);
         particle.randomLocation(playerData.getViewers(), playerData.getHipsLocation(), 1, 10);
         SomSound.Heal.play(playerData.getViewers(), playerData.getSoundLocation());
         return null;

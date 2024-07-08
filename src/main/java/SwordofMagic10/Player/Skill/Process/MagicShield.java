@@ -17,10 +17,10 @@ public class MagicShield extends SomSkill {
 
     @Override
     public String active() {
-        playerData.addEffect(new SomEffect(this, true));
+        playerData.addEffect(new SomEffect(this, true), playerData);
         SomBlockParticle blockParticle = new SomBlockParticle(Material.LIGHT_BLUE_STAINED_GLASS);
         blockParticle.rotationCircleAtEntity(playerData.getViewers(), playerData, new Vector(0.5, 1.5, 0.5), -1.2, 1.5, 4, 16, getDurationTick(), 4);
-        SomParticle particle = new SomParticle(Color.AQUA);
+        SomParticle particle = new SomParticle(Color.AQUA, playerData);
         particle.randomLocation(playerData.getViewers(), playerData.getHipsLocation(), 1, 10);
         SomSound.Heal.play(playerData.getViewers(), playerData.getSoundLocation());
         return null;

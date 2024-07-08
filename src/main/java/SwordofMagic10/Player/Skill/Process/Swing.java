@@ -22,7 +22,7 @@ public class Swing extends SomSkill {
         if (ray.isHitEntity()) {
             Damage.makeDamage(playerData, ray.getHitEntity(), DamageEffect.None, DamageOrigin.ATK, getDamage());
         }
-        SomParticle particle = new SomParticle(Particle.CRIT);
+        SomParticle particle = new SomParticle(Particle.CRIT, playerData);
         particle.randomLocation(playerData.getViewers(), ray.getHitPosition(), 0.5, 25);
         SomSound.Slash.play(playerData.getViewers(), playerData.getSoundLocation());
         return null;

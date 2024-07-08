@@ -19,7 +19,7 @@ public class ViewParticle implements SomCommand, SomTabComplete {
     public boolean PlayerCommand(Player player, PlayerData playerData, String[] args) {
         if (args.length >= 2) {
             try {
-                SomParticle particle = new SomParticle(Particle.END_ROD);
+                SomParticle particle = new SomParticle(Particle.END_ROD, playerData);
                 switch (args[0]) {
                     case "Circle" -> {
                         particle.circle(playerData.getViewers(), playerData.getLocation(), Double.parseDouble(args[1]));

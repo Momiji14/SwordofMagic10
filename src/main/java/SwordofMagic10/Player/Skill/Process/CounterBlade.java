@@ -10,7 +10,6 @@ import org.bukkit.scheduler.BukkitTask;
 
 public class CounterBlade extends BladeSkill {
 
-    public static SomEffect Effect = new SomEffect("CounterBlade", "反撃刀", true, 30, 3);
     public CounterBlade(PlayerData playerData) {
         super(playerData);
     }
@@ -18,11 +17,12 @@ public class CounterBlade extends BladeSkill {
     private BukkitTask task;
     @Override
     public String active() {
-        playerData.addEffect(Effect.setTime(getDuration()).setStack(getCount()));
-        SomParticle particle = new SomParticle(Particle.SOUL_FIRE_FLAME);
+        SomEffect effect = new SomEffect(getId(), getDisplay(), true, getDuration(), getCount());
+        playerData.addEffect(effect, playerData);
+        SomParticle particle = new SomParticle(Particle.SOUL_FIRE_FLAME, playerData);
         SomSound.Blade.play(playerData);
-        task = SomTask.timer(() -> {
-            if (playerData.hasEffect(Effect)) {
+        task = SomTask.timerPlayer(playerData, () -> {
+            if (playerData.hasEffect(effect)) {
                 particle.spawn(playerData.getViewers(), playerData.getHipsLocation());
             } else {
                 task.cancel();

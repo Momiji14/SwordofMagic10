@@ -9,7 +9,7 @@ public interface SomStatus {
     HashMap<StatusType, Double> getStatus();
 
     default double getStatus(StatusType status) {
-        return this.getStatus().getOrDefault(status, 0d);
+        return this.getStatus().getOrDefault(status, 0.0);
     }
 
     default void setStatus(StatusType status, double value) {
@@ -21,7 +21,7 @@ public interface SomStatus {
     }
 
     default double getMaxHealth() {
-        return getStatus().getOrDefault(StatusType.MaxHealth, 0d);
+        return getStatus().getOrDefault(StatusType.MaxHealth, 0.0);
     }
 
     default SomStatus setMaxHealth(double value) {
@@ -30,7 +30,7 @@ public interface SomStatus {
     }
 
     default double getHealth() {
-        return getStatus().getOrDefault(StatusType.Health, 0d);
+        return getStatus().getOrDefault(StatusType.Health, 0.0);
     }
 
     default void setHealth(double value) {
@@ -46,7 +46,7 @@ public interface SomStatus {
     }
 
     default double getHealthRegen() {
-        return getStatus().getOrDefault(StatusType.HealthRegen, 0d);
+        return getStatus().getOrDefault(StatusType.HealthRegen, 0.0);
     }
 
     default SomStatus setHealthRegen(double value) {
@@ -55,7 +55,7 @@ public interface SomStatus {
     }
 
     default double getMaxMana() {
-        return getStatus().getOrDefault(StatusType.MaxMana, 0d);
+        return getStatus().getOrDefault(StatusType.MaxMana, 0.0);
     }
 
     default SomStatus setMaxMana(double value) {
@@ -64,7 +64,7 @@ public interface SomStatus {
     }
 
     default double getMana() {
-        return getStatus().getOrDefault(StatusType.Mana, 0d);
+        return getStatus().getOrDefault(StatusType.Mana, 0.0);
     }
 
     default void setMana(double value) {
@@ -75,8 +75,12 @@ public interface SomStatus {
         setMana(getMana()+value);
     }
 
+    default double getManaPercent() {
+        return getMana() / getMaxMana();
+    }
+
     default double getManaRegen() {
-        return getStatus().getOrDefault(StatusType.ManaRegen, 0d);
+        return getStatus().getOrDefault(StatusType.ManaRegen, 0.0);
     }
 
     default SomStatus setManaRegen(double value) {
@@ -85,7 +89,7 @@ public interface SomStatus {
     }
 
     default double getATK() {
-        return getStatus().getOrDefault(StatusType.ATK, 0d);
+        return getStatus().getOrDefault(StatusType.ATK, 0.0);
     }
 
     default SomStatus setATK(double value) {
@@ -94,7 +98,7 @@ public interface SomStatus {
     }
 
     default double getMAT() {
-        return getStatus().getOrDefault(StatusType.MAT, 0d);
+        return getStatus().getOrDefault(StatusType.MAT, 0.0);
     }
 
     default SomStatus setMAT(double value) {
@@ -103,7 +107,7 @@ public interface SomStatus {
     }
 
     default double getDEF() {
-        return getStatus().getOrDefault(StatusType.DEF, 0d);
+        return getStatus().getOrDefault(StatusType.DEF, 0.0);
     }
 
     default SomStatus setDEF(double value) {
@@ -112,7 +116,7 @@ public interface SomStatus {
     }
 
     default double getMDF() {
-        return getStatus().getOrDefault(StatusType.MDF, 0d);
+        return getStatus().getOrDefault(StatusType.MDF, 0.0);
     }
 
     default SomStatus setMDF(double value) {
@@ -121,7 +125,7 @@ public interface SomStatus {
     }
 
     default double getSPT() {
-        return getStatus().getOrDefault(StatusType.SPT, 0d);
+        return getStatus().getOrDefault(StatusType.SPT, 0.0);
     }
 
     default SomStatus setSPT(double value) {
@@ -129,4 +133,19 @@ public interface SomStatus {
         return this;
     }
 
+    interface Basic extends SomStatus {
+        HashMap<StatusType, Double> getBasicStatus();
+
+        default double getBasicStatus(StatusType status) {
+            return this.getBasicStatus().getOrDefault(status, 0.0);
+        }
+
+        default void setBasicStatus(StatusType status, double value) {
+            this.getBasicStatus().put(status, value);
+        }
+
+        default void addBasicStatus(StatusType status, double value) {
+            this.getBasicStatus().merge(status, value, Double::sum);
+        }
+    }
 }

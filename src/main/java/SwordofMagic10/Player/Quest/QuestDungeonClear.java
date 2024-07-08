@@ -1,9 +1,13 @@
 package SwordofMagic10.Player.Quest;
 
-import SwordofMagic10.Component.SomJson;
-import SwordofMagic10.Dungeon.DungeonDifficulty;
-import SwordofMagic10.Dungeon.Instance.DungeonInstance;
+import SwordofMagic10.Player.Dungeon.DungeonDifficulty;
+import SwordofMagic10.Player.Dungeon.Instance.DungeonInstance;
 import SwordofMagic10.Player.PlayerData;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static SwordofMagic10.Component.Function.decoText;
 
 public class QuestDungeonClear extends QuestPhase implements Cloneable {
 
@@ -16,12 +20,27 @@ public class QuestDungeonClear extends QuestPhase implements Cloneable {
         super(questData);
     }
 
+    @Override
+    public List<String> sidebarLine(PlayerData playerData) {
+        List<String> list = new ArrayList<>();
+        list.add("§7・§e" + getDungeonDisplay() + ":" + getDifficultyDisplay() + " §a" + count + "/" + reqCount);
+        return list;
+    }
+
+    public String getDungeonDisplay() {
+        return dungeonID.equals("Any") ? "指定なし" : DungeonInstance.get(dungeonID).getDisplay();
+    }
+
     public String getDungeonID() {
         return dungeonID;
     }
 
     public void setDungeonID(String dungeonID) {
         this.dungeonID = dungeonID;
+    }
+
+    public String getDifficultyDisplay() {
+        return difficulty == null ? "Any" : difficulty.toString();
     }
 
     public DungeonDifficulty getDifficulty() {
@@ -57,7 +76,7 @@ public class QuestDungeonClear extends QuestPhase implements Cloneable {
     }
 
     public void clear(DungeonInstance dungeon) {
-        if (getDungeonID().equals(dungeon.getId())) {
+        if (getDungeonID().equals(dungeon.getId()) || getDungeonID().equals("Any")){
             if (getDifficulty() == null || getDifficulty() == dungeon.getDifficulty()) {
                 count++;
             }
@@ -67,20 +86,6 @@ public class QuestDungeonClear extends QuestPhase implements Cloneable {
     @Override
     public boolean isProcess(PlayerData playerData) {
         return reqCount <= count;
-    }
-
-    @Override
-    public SomJson toJson() {
-        SomJson json = new SomJson();
-        json.set("Count", getCount());
-        return json;
-    }
-
-    @Override
-    public QuestPhase fromJson(SomJson json) {
-        QuestDungeonClear questDungeonClear = clone();
-        questDungeonClear.setCount(json.getInt("Count", 0));
-        return questDungeonClear;
     }
 
     @Override

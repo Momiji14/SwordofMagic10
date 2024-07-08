@@ -1,15 +1,19 @@
 package SwordofMagic10.Entity.Enemy;
 
 import SwordofMagic10.Component.*;
-import SwordofMagic10.Dungeon.DungeonDifficulty;
+import SwordofMagic10.Player.Dungeon.DungeonDifficulty;
+import SwordofMagic10.Player.Dungeon.Instance.DungeonInstance;
 import SwordofMagic10.Entity.*;
 import SwordofMagic10.Item.SomItem;
+import SwordofMagic10.Item.SomRecord;
 import SwordofMagic10.Item.SomRune;
 import SwordofMagic10.Player.Classes.ClassType;
 import SwordofMagic10.Player.Classes.Classes;
+import SwordofMagic10.Player.Map.MapData;
 import SwordofMagic10.Player.PlayerData;
 import SwordofMagic10.Player.Quest.QuestEnemyKill;
 import SwordofMagic10.Player.Quest.SomQuest;
+import SwordofMagic10.Player.QuickGUI.RuneCrusher;
 import SwordofMagic10.Player.Statistics;
 import SwordofMagic10.SomCore;
 import com.destroystokyo.paper.entity.Pathfinder;
@@ -24,13 +28,17 @@ import org.bukkit.entity.Mob;
 import org.bukkit.entity.Slime;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.util.BoundingBox;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
+import static SwordofMagic10.Component.Config.AdjustExp;
 import static SwordofMagic10.Component.Function.*;
-import static SwordofMagic10.Dungeon.Instance.DungeonInstance.Radius;
+import static SwordofMagic10.Player.Dungeon.Instance.DefensiveBattle.DefensiveEnemy;
+import static SwordofMagic10.Player.Dungeon.Instance.DungeonInstance.Radius;
 import static SwordofMagic10.SomCore.Log;
 
 public class EnemyData implements SomEntity {
@@ -50,44 +58,52 @@ public class EnemyData implements SomEntity {
     private final LivingEntity entity;
     private final MobData mobData;
     private boolean isDeath = false;
+    private boolean isDelete = false;
     private boolean isLoad = false;
     private final int level;
     private final HashMap<StatusType, Double> status = new HashMap<>();
-    private final HashMap<DamageEffect, Double> damageEffect = new HashMap<>();
-    private final HashMap<String, SomEffect> effect = new HashMap<>();
+    private final HashMap<StatusType, Double> basicStatus = new HashMap<>();
+    private final ConcurrentHashMap<DamageEffect, Double> damageEffect = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, SomEffect> effect = new ConcurrentHashMap<>();
+    private final DungeonInstance dungeon;
+    private final MapData mapData;
     private SomEntity target;
-    private SomEntity targetOverride;
+    private CustomLocation targetOverride;
+    private SomEntity targetOverrideEntity;
+    private int index = 0;
     private final CustomLocation spawnLocation;
     private final Collection<PlayerData> interactAblePlayers;
-    private BukkitTask aiTask = null;
+    private final BukkitTask aiTask;
+    private final BukkitTask effectTask;
     private BossBar healthBar;
     private final DungeonDifficulty difficulty;
-    private final HashMap<SomEntity, Double> hateMap = new HashMap<>();
-    private final HashMap<SomEntity, Double> damageMap = new HashMap<>();
+    private final ConcurrentHashMap<SomEntity, Double> hateMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<SomEntity, Double> damageMap = new ConcurrentHashMap<>();
     private final List<DropData> dropDataList;
+    private double healthMultiply = 1;
 
-    public static EnemyData spawn(MobData mobData, int level, DungeonDifficulty difficulty, Location location, Collection<PlayerData> viewers) {
+    public static EnemyData spawn(MobData mobData, int level, DungeonDifficulty difficulty, Location location, Collection<PlayerData> viewers, MapData mapData) {
+        return spawn(mobData, level, difficulty, location,  viewers, mapData, null);
+    }
+
+    public static EnemyData spawn(MobData mobData, int level, DungeonDifficulty difficulty, Location location, Collection<PlayerData> viewers, MapData mapData, DungeonInstance dungeon) {
         if (mobData.getCustomClass() != null) {
             try {
                 Class<?> bossClass = Class.forName("SwordofMagic10.Entity.Enemy.Boss." + mobData.getCustomClass());
-                Constructor<?> constructor = bossClass.getConstructor(MobData.class, int.class, DungeonDifficulty.class, Location.class, Collection.class);
-                return  (EnemyData) constructor.newInstance(mobData, level, difficulty, location, viewers);
+                Constructor<?> constructor = bossClass.getConstructor(MobData.class, int.class, DungeonDifficulty.class, Location.class, Collection.class, MapData.class, DungeonInstance.class);
+                return  (EnemyData) constructor.newInstance(mobData, level, difficulty, location, viewers, mapData, dungeon);
             } catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException |
                      InstantiationException | IllegalAccessException e) {
                 throw new RuntimeException(e);
             }
         } else {
-            return new EnemyData(mobData, level, difficulty, location, viewers);
+            return new EnemyData(mobData, level, difficulty, location, viewers, mapData, dungeon);
         }
     }
-    protected EnemyData(MobData mobData, int level, DungeonDifficulty difficulty, Location location, Collection<PlayerData> viewers) {
-        interactAblePlayers = viewers;
-        spawnLocation = new CustomLocation(location);
-        this.level = level;
-        this.mobData = mobData;
-        this.difficulty = difficulty;
-        dropDataList = new ArrayList<>(mobData.getDropDataList());
+
+    public static LivingEntity summonEntity(MobData mobData, Location location, Collection<PlayerData> viewers) {
         World world = location.getWorld();
+        LivingEntity entity;
         switch (mobData.getEntityType()) {
             case SLIME -> {
                 Slime slime = (Slime) world.spawnEntity(location, mobData.getEntityType(), false);
@@ -103,9 +119,6 @@ public class EnemyData implements SomEntity {
                 entity = (LivingEntity) world.spawnEntity(location, mobData.getEntityType(), false);
             }
         }
-
-        entity.setMetadata(Config.EnemyMetaAddress, new FixedMetadataValue(SomCore.plugin(), this));
-        entity.setCustomName("§c《" + mobData.getDisplay() + " Lv" + level + "》");
         entity.setCustomNameVisible(true);
         entity.setSilent(true);
         for (PlayerData playerData : PlayerData.getPlayerList()) {
@@ -121,6 +134,22 @@ public class EnemyData implements SomEntity {
             disguise.setCustomDisguiseName(true);
             disguise.startDisguise();
         }
+        return entity;
+    }
+    protected EnemyData(MobData mobData, int level, DungeonDifficulty difficulty, Location location, Collection<PlayerData> viewers, MapData mapData, DungeonInstance dungeon) {
+        interactAblePlayers = viewers;
+        this.dungeon = dungeon;
+        this.mapData = mapData;
+        spawnLocation = new CustomLocation(location);
+        this.level = level;
+        this.mobData = mobData;
+        this.difficulty = difficulty;
+        dropDataList = new ArrayList<>(mobData.getDropDataList());
+
+        entity = summonEntity(mobData, location, viewers);
+        entity.setMetadata(Config.EnemyMetaAddress, new FixedMetadataValue(SomCore.plugin(), this));
+        entity.addScoreboardTag(Config.SomEntityTag);
+        entity.setCustomName("§c《" + mobData.getDisplay() + " Lv" + level + "》");
 
         updateStatus();
         setHealth(getMaxHealth());
@@ -128,53 +157,70 @@ public class EnemyData implements SomEntity {
         Mob mob = (Mob) entity;
         Pathfinder pathfinder = mob.getPathfinder();
         if (isBoss()) {
-            healthBar = Bukkit.createBossBar("§c§l" + mobData.getDisplay(), BarColor.RED, BarStyle.SOLID);
+            healthBar = Bukkit.createBossBar(bossBarTitle(), BarColor.RED, BarStyle.SEGMENTED_20);
         }
+        effectTask = SomTask.timer(() -> tickEffect(2), 2);
         aiTask = SomTask.syncTimer(() -> {
             if (!isInvalid()) {
                 isLoad = true;
                 if (isBoss()) {
+                    healthBar.setTitle(bossBarTitle());
                     healthBar.setProgress(getHealthPercent());
                     healthBar.removeAll();
                     for (PlayerData viewer : getViewers()) {
                         healthBar.addPlayer(viewer.getPlayer());
                     }
                 }
-                hateMap.keySet().removeIf(entity -> entity instanceof PlayerData playerData && playerData.getPlayer().getGameMode() != GameMode.ADVENTURE);
-                hateMap.keySet().removeIf(SomEntity::isDeath);
-                hateMap.keySet().removeIf(somEntity -> somEntity.getLocation().distance(getLocation()) > 128);
-                if (hateMap.size() == 0) target = null;
+                if (targetOverride == null && targetOverrideEntity == null) {
+                    hateMap.keySet().removeIf(entity -> entity instanceof PlayerData playerData && playerData.isOnline() && playerData.getPlayer().getGameMode() != GameMode.ADVENTURE);
+                    hateMap.keySet().removeIf(SomEntity::isInvalid);
+                    hateMap.keySet().removeIf(somEntity -> somEntity.getLocation().distance(getLocation()) > 128);
+                    if (hateMap.isEmpty()) target = null;
 
-                if (target == null) {
-                    for (PlayerData viewer : getViewers(Radius)) {
-                        addHate(viewer, randomDouble(0, 1));
+                    if (target == null) {
+                        for (SomEntity somEntity : SomEntity.nearestSomEntity(getTargets(), getLocation(), Radius)) {
+                            addHate(somEntity, 1);
+                            break;
+                        }
                     }
-                }
-
-                double hate = 0;
-                for (Map.Entry<SomEntity, Double> entry : hateMap.entrySet()) {
-                    SomEntity entity = entry.getKey();
-                    if (hate < entry.getValue() && !(entity.hasEffect("Fade") || entity.hasEffect("MistMidnight"))) {
-                        target = entity;
-                        hate = entry.getValue();
+                    double hate = 0;
+                    for (Map.Entry<SomEntity, Double> entry : hateMap.entrySet()) {
+                        SomEntity entity = entry.getKey();
+                        if (hate < entry.getValue() && !(entity.hasEffect("Fade") || entity.hasEffect("MistMidnight"))) {
+                            target = entity;
+                            hate = entry.getValue();
+                        }
                     }
-                }
-                if (target != null) {
-                    pathfinder.moveTo(target.getLocation());
+                    if (target != null && mob.getBoundingBox().getWidthX() + 0.3 < getLocation().distance(target.getLocation())) {
+                        mob.setAI(true);
+                        pathfinder.moveTo(target.getLocation());
+                    } else {
+                        pathfinder.stopPathfinding();
+                        mob.setAI(false);
+                    }
+                } else if (targetOverrideEntity != null){
+                    pathfinder.moveTo(targetOverrideEntity.getLocation());
+                } else {
+                    pathfinder.moveTo(targetOverride);
                 }
                 if (!isSilence("Other")) {
                     for (PlayerData playerData : interactAblePlayers) {
-                        if (mob.getBoundingBox().expand(1.5 + mobData.getCollisionSize()).contains(playerData.getPlayer().getBoundingBox())) {
+                        BoundingBox boundingBox = mob.getBoundingBox().expand(1.5 + mobData.getCollisionSize());
+                        if (playerData.getPlayer().isOnGround()) boundingBox.expand(0, 8, 0);
+                        if (boundingBox.contains(playerData.getPlayer().getBoundingBox())) {
                             attack(playerData);
                         }
                     }
                 }
-                tickEffect();
                 tick();
             } else {
                 delete();
             }
         }, 20);
+    }
+
+    public String bossBarTitle() {
+        return "§c§l" + mobData.getDisplay() + " " + scale(getHealthPercent()*100, 2) + "%";
     }
 
     public void setGlobal(boolean global) {
@@ -187,7 +233,7 @@ public class EnemyData implements SomEntity {
 
     public boolean isBoss() {
         switch (mobData.getTier()) {
-            case Boss, RaidBoss -> {
+            case Boss, WorldRaidBoss, LegendRaidBoss -> {
                 return true;
             }
             default -> {
@@ -251,22 +297,7 @@ public class EnemyData implements SomEntity {
 
     @Override
     public HashMap<StatusType, Double> getBaseStatus() {
-        return new HashMap<>() {{
-            put(StatusType.MaxHealth, 100.0);
-            put(StatusType.MaxMana, 100.0);
-            put(StatusType.HealthRegen, 1.0);
-            put(StatusType.ManaRegen, 1.0);
-            put(StatusType.ATK, 10.0);
-            put(StatusType.MAT, 10.0);
-            put(StatusType.DEF, 10.0);
-            put(StatusType.MDF, 10.0);
-            put(StatusType.SPT, 10.0);
-            put(StatusType.Critical, 10.0);
-            put(StatusType.CriticalDamage, 10.0);
-            put(StatusType.CriticalResist, 10.0);
-            put(StatusType.DamageResist, 1.0);
-            put(StatusType.Movement, 200.0);
-        }};
+        return mobData.getStatus();
     }
 
     public List<DropData> getDropDataList() {
@@ -282,9 +313,10 @@ public class EnemyData implements SomEntity {
                 case "CAVE_SPIDER" -> sound = Sound.ENTITY_SPIDER_HURT;
                 case "ENDER_CRYSTAL" -> sound = Sound.BLOCK_GRASS_BREAK;
                 case "MUSHROOM_COW" -> sound = Sound.ENTITY_COW_HURT;
+                case "BLOCK_DISPLAY", "FALLING_BLOCK" -> sound = null;
                 default -> sound = Sound.valueOf("ENTITY_" + type + "_HURT");
             }
-            for (PlayerData viewer : viewers) {
+            if (sound != null) for (PlayerData viewer : viewers) {
                 viewer.getPlayer().playSound(getLocation(), sound, SoundCategory.HOSTILE, 1f, 1f);
             }
         } catch (Exception e) {
@@ -299,12 +331,17 @@ public class EnemyData implements SomEntity {
     }
 
     @Override
-    public HashMap<DamageEffect, Double> getDamageEffect() {
+    public HashMap<StatusType, Double> getBasicStatus() {
+        return basicStatus;
+    }
+
+    @Override
+    public ConcurrentHashMap<DamageEffect, Double> getDamageEffect() {
         return damageEffect;
     }
 
     @Override
-    public HashMap<String, SomEffect> getEffect() {
+    public ConcurrentHashMap<String, SomEffect> getEffect() {
         return effect;
     }
 
@@ -315,28 +352,69 @@ public class EnemyData implements SomEntity {
 
     @Override
     public boolean isInvalid() {
-        return isDeath() || !entity.isValid();
+        return isDeath() || isDelete || !entity.isValid();
     }
 
     public SomEntity getTarget() {
         return target;
     }
 
-    public SomEntity getTargetOverride() {
+    public MapData getMapData() {
+        return mapData;
+    }
+
+    public DungeonInstance getDungeon(){
+        return dungeon;
+    }
+
+    public boolean isInDungeon() {
+        return dungeon != null;
+    }
+
+    public CustomLocation getTargetOverride() {
         return targetOverride;
     }
 
-    public void setTargetOverride(SomEntity targetOverride) {
+    public void setTargetOverride(CustomLocation targetOverride) {
         this.targetOverride = targetOverride;
+    }
+
+    public SomEntity getTargetOverrideEntity() {
+        return targetOverrideEntity;
+    }
+
+    public void setTargetOverrideEntity(SomEntity targetOverrideEntity) {
+        this.targetOverrideEntity = targetOverrideEntity;
+    }
+
+    public int getIndex() {
+        return index;
+    }
+
+    public void setIndex(int index) {
+        this.index = index;
     }
 
     public boolean isTargeting() {
         return target != null;
     }
 
+    public double getHealthMultiply() {
+        return healthMultiply;
+    }
+
+    public EnemyData setHealthMultiply(double healthMultiply) {
+        this.healthMultiply = healthMultiply;
+        updateStatus();
+        setHealth(getMaxHealth());
+        return this;
+    }
+
     public void delete() {
+        isDelete = true;
         enemyList.remove(this);
         aiTask.cancel();
+        effectTask.cancel();
         if (isBoss()) {
             healthBar.setProgress(0);
             healthBar.removeAll();
@@ -367,28 +445,40 @@ public class EnemyData implements SomEntity {
             isDeath = true;
             deathLocation = getLocation();
             delete();
-            SomParticle particle = new SomParticle(Particle.FIREWORKS_SPARK).setRandomVector().setRandomSpeed(0.1f).setAmount(10);
+            SomParticle particle = new SomParticle(Particle.FIREWORKS_SPARK, this).setRandomVector().setRandomSpeed(0.1f).setAmount(10);
             particle.spawn(getViewers(), entity.getBoundingBox().getCenter().toLocation(entity.getWorld()));
             List<String> damageRanking = new ArrayList<>();
             if (isBoss()) {
                 damageRanking.add(decoText("ダメージランキング"));
                 int i = 1;
-                for (Map.Entry<SomEntity, Double> entry : damageMap.entrySet()) {
+                for (Map.Entry<SomEntity, Double> entry : damageMap.entrySet().stream().sorted(Map.Entry.comparingByValue()).toList()) {
                     damageRanking.add(decoLore("[" + i + "]" + entry.getKey().getDisplayName()) + scale(entry.getValue()));
                     i++;
                 }
             }
-            int exp = (int) Math.ceil(mobData.getExp() * (1 + level/10f) * multiply);
-            for (PlayerData playerData : new HashSet<>(interactAblePlayers)) {
+            Set<PlayerData> dropPlayer = new HashSet<>();
+            double exp = (Classes.getExp(level)/level) * (0.8 + difficulty.getMultiply() * 0.2) * mobData.getTier().getMultiply() * multiply;
+            if (dungeon != null ) {
+                if (isBoss()) dungeon.clearTime();
+                dropPlayer.addAll(interactAblePlayers);
+            } else {
+                for (PlayerData playerData : SomEntity.nearPlayer(mapData.getPlayerList(), deathLocation, 32)) {
+                    if (playerData.hasParty()) {
+                        dropPlayer.addAll(playerData.getParty().getMember());
+                    } else dropPlayer.add(playerData);
+                }
+            }
+            for (PlayerData playerData : dropPlayer) {
+                if (playerData.isAFK() && (dungeon == null || !dungeon.isLegendRaid())) continue;
                 if (isBoss()) playerData.sendMessage(damageRanking, null);
+                if (hasEffect(DefensiveEnemy)) continue;
                 Classes classes = playerData.getClasses();
                 ClassType mainClass = classes.getMainClass();
-                classes.addExp(mainClass, exp);
-                playerData.addEquipmentExp(exp, getLevel());
-                if (playerData.getSetting().isExpLog()) {
-                    playerData.sendMessage("§a[EXP+]§e装備EXP §e+" + exp);
-                }
-                playerData.getStatistics().add(Statistics.Enum.EnemyKill, 1);
+                classes.addExp(mainClass, exp * AdjustExp(playerData, getLevel()));
+                int equipmentExp = 2+(level/10);
+                playerData.addEquipmentExp(equipmentExp, getLevel());
+                playerData.getStatistics().add(Statistics.Type.EnemyKill, 1);
+                if (dungeon != null) dungeon.equipmentDrop(playerData, 0.01);
 
                 for (DropData dropData : dropDataList) {
                     double percent = dropData.getPercent();
@@ -400,10 +490,9 @@ public class EnemyData implements SomEntity {
                             amount = (int) Math.floor(amount*percent);
                         }
                         SomItem item = dropData.getItem();
-                        playerData.getItemInventory().add(item, amount);
-                        String percentText = " §7(" + scale(percent*100, -1) + "%)";
-                        if (playerData.getSetting().isItemLog()) {
-                            playerData.sendSomText(SomText.create("§b[+]§r").addText(item.toSomText(amount)).addText(percentText));
+                        playerData.getItemInventory().add(item, amount, percent);
+                        if (item instanceof SomRecord) {
+                            SomCore.globalMessageComponent(SomText.create(playerData.getDisplayName()).add("§aが").add(item.toSomText()).add("§aを§e獲得§aしました"));
                         }
                     }
                 }
@@ -414,7 +503,12 @@ public class EnemyData implements SomEntity {
                     rune.setQuality(randomDouble(0, 1));
                     rune.setLevel(getLevel());
                     rune.setTier(difficulty.ordinal()+1);
-                    playerData.getItemInventory().add(rune, 1);
+                    rune.randomPower();
+                    if (playerData.getSetting().isRuneAutoCrash()) {
+                        playerData.getItemInventory().add(RuneCrusher.getPowder(rune), RuneCrusher.amount(rune), runePercent);
+                    } else {
+                        playerData.getItemInventory().add(rune, 1, runePercent);
+                    }
                 }
 
                 for (SomQuest somQuest : playerData.getQuestMenu().getQuests().values()) {

@@ -3,6 +3,7 @@ package SwordofMagic10.Command.Player;
 import SwordofMagic10.Command.SomCommand;
 import SwordofMagic10.Command.SomTabComplete;
 import SwordofMagic10.Component.SomSound;
+import SwordofMagic10.Component.SomText;
 import SwordofMagic10.Player.PlayerData;
 import SwordofMagic10.Player.SomParty;
 import org.bukkit.Bukkit;
@@ -20,6 +21,19 @@ public class Party implements SomCommand, SomTabComplete {
     @Override
     public boolean PlayerCommand(Player player, PlayerData playerData, String[] args) {
         if (args.length >= 1) {
+            if (args[0].equalsIgnoreCase("list")) {
+                List<SomText> message = new ArrayList<>();
+                message.add(SomText.create(decoText("パーティリスト")));
+                for (SomParty party : SomParty.getPartyList().values()) {
+                    StringBuilder member = new StringBuilder(decoText("メンバー"));
+                    for (PlayerData memberData : party.getMember()) {
+                        member.append("§7・§r").append(memberData.getDisplayName());
+                    }
+                    message.add(SomText.create("§7・§e").addHover(party.getId(), member.toString()));
+                }
+                if (message.size() == 1) message.add(SomText.create("§7・§cパーティなし"));
+                playerData.sendSomText(message, SomSound.Tick);
+            }
             if (!playerData.hasParty()) {
                 if (args[0].equalsIgnoreCase("create")) {
                     String id = args.length >= 2 ? args[1] : player.getName() + "のパーティ";
@@ -44,7 +58,7 @@ public class Party implements SomCommand, SomTabComplete {
                     message.add("§7・§e" + party.getLeader().getDisplayName());
                     for (PlayerData member : party.getMember()) {
                         if (member != party.getLeader()) {
-                            message.add("§7・§r" + party.getLeader().getDisplayName());
+                            message.add("§7・§r" + member.getDisplayName());
                         }
                     }
                     playerData.sendMessage(message, SomSound.Tick);
@@ -54,7 +68,20 @@ public class Party implements SomCommand, SomTabComplete {
                     if (args[0].equalsIgnoreCase("invite")) {
                         Player invitePlayer = Bukkit.getPlayer(args[1]);
                         if (invitePlayer != null && invitePlayer.isOnline()) {
-                            playerData.getParty().invitePlayer(playerData, PlayerData.get(invitePlayer));
+                            party.invitePlayer(playerData, PlayerData.get(invitePlayer));
+                        } else {
+                            playerData.sendMessage("§cオフライン§aまたは§c存在§aしない§eプレイヤー§aです", SomSound.Nope);
+                        }
+                        return true;
+                    } else if (args[0].equalsIgnoreCase("kick")) {
+                        Player kickPlayer = Bukkit.getPlayer(args[1]);
+                        if (kickPlayer != null && kickPlayer.isOnline()) {
+                            PlayerData kickData = PlayerData.get(kickPlayer);
+                            if (party.getMember().contains(kickData)) {
+                                party.kickPlayer(kickData);
+                            } else {
+                                playerData.sendMessage(kickData.getDisplayName() + "§aは§eパーティメンバー§aではありません", SomSound.Nope);
+                            }
                         } else {
                             playerData.sendMessage("§cオフライン§aまたは§c存在§aしない§eプレイヤー§aです", SomSound.Nope);
                         }
@@ -93,7 +120,9 @@ public class Party implements SomCommand, SomTabComplete {
                 }
             } else {
                 complete.add("invite");
+                complete.add("status");
                 complete.add("leave");
+                if (playerData.getParty().getLeader() == playerData) complete.add("Kick");
             }
         }
         if (args.length == 2) {

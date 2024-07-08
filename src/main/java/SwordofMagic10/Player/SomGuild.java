@@ -37,7 +37,7 @@ public class SomGuild {
 
     public void setMaster(UUID uuid) {
         SomSQL.setSql("Guild", "ID", id, "Master", uuid.toString());
-        sendMessage(PlayerData.getDisplayName(uuid) + "§aが§eギルドマスター§aになりました", SomSound.Tick);
+        sendMessage(PlayerData.getUsername(uuid) + "§aが§eギルドマスター§aになりました", SomSound.Tick);
     }
 
     public void joinPlayer(PlayerData playerData) {

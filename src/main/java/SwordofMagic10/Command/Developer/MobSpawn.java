@@ -3,10 +3,11 @@ package SwordofMagic10.Command.Developer;
 import SwordofMagic10.Command.SomCommand;
 import SwordofMagic10.Command.SomTabComplete;
 import SwordofMagic10.DataBase.MobDataLoader;
-import SwordofMagic10.Dungeon.DungeonDifficulty;
+import SwordofMagic10.Player.Dungeon.DungeonDifficulty;
 import SwordofMagic10.Entity.Enemy.EnemyData;
 import SwordofMagic10.Entity.Enemy.MobData;
 import SwordofMagic10.Player.PlayerData;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -17,11 +18,19 @@ import java.util.List;
 public class MobSpawn implements SomCommand, SomTabComplete {
     @Override
     public boolean PlayerCommand(Player player, PlayerData playerData, String[] args) {
-        if (args.length == 3) {
+        if (args.length >= 3) {
             MobData mobData = MobDataLoader.getMobData(args[0]);
             int level = Integer.parseInt(args[1]);
             DungeonDifficulty difficulty = DungeonDifficulty.valueOf(args[2]);
-            EnemyData.spawn(mobData, level, difficulty, player.getLocation(), PlayerData.getPlayerList()).setGlobal(true);
+            List<PlayerData> viewer = new ArrayList<>();
+            if (args.length >= 4) {
+                for (int i = 3; i < args.length; i++) {
+                    viewer.add(PlayerData.get(Bukkit.getPlayer(args[i])));
+                }
+            } else {
+                viewer.addAll(PlayerData.getPlayerList());
+            }
+            EnemyData.spawn(mobData, level, difficulty, player.getLocation(), viewer, playerData.getMapData()).setGlobal(true);
         } else {
             playerData.sendMessage("§e/mobSpawn <mobData> <level> <difficulty>");
         }

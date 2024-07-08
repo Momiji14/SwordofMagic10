@@ -12,7 +12,7 @@ import java.util.concurrent.ExecutionException;
 import static SwordofMagic10.SomCore.Log;
 
 public class SomSQL {
-    private static final String host = "192.168.0.18";
+    private static final String host = "192.168.0.8";
     private static final int port = 3306;
     private static final String database = "SwordofMagic10";
     private static final String user = "somnet";
@@ -26,7 +26,6 @@ public class SomSQL {
         MySQLConnectionFactory factory = new MySQLConnectionFactory(new Configuration(user, host, port, pass, database));
         ConnectionPoolConfiguration configuration = new ConnectionPoolConfiguration();
         connection = new ConnectionPool<>(factory, configuration);
-        //connection = MySQLConnectionBuilder.createConnectionPool("jdbc:mysql://$" + host + ":$" + port + "/$" + database + "?user=$" + user + "&password=$" + pass);
         try {
             connection.connect().get();
         } catch (InterruptedException | ExecutionException e) {
@@ -53,6 +52,7 @@ public class SomSQL {
         try {
             return future.get().getRows();
         } catch (InterruptedException | ExecutionException e) {
+            Log("§c[QueryError]§r" + query);
             throw new RuntimeException(e);
         }
     }
@@ -61,6 +61,7 @@ public class SomSQL {
         try {
             return connection.sendQuery(query).get().getRows();
         } catch (InterruptedException | ExecutionException e) {
+            Log("§c[QueryError]§r" + query);
             throw new RuntimeException(e);
         }
     }
@@ -81,12 +82,101 @@ public class SomSQL {
 
     public static RowData getSql(String table, String[] primaryKey, String[] primaryValue, String colum) {
         String[] primary = normalization(primaryKey, primaryValue);
-        return query("select " + colum + " from " + table + " where (" + primary[0] + ") = (" + primary[1] + ")").get(0);
+        return query("select " + colum + " from `" + table + "` where (" + primary[0] + ") = (" + primary[1] + ")").get(0);
+    }
+
+    public static RowData getSql(String table, String colum) {
+        return query("select " + colum + " from `" + table + "`").get(0);
+    }
+
+    public static ResultSet getSqlList(String table, String primaryKey, String primaryValue, String colum) {
+        return getSqlList(table, new String[]{primaryKey}, new String[]{primaryValue}, colum);
     }
 
     public static ResultSet getSqlList(String table, String[] primaryKey, String[] primaryValue, String colum) {
         String[] primary = normalization(primaryKey, primaryValue);
-        return query("select " + colum + " from " + table + " where (" + primary[0] + ") = (" + primary[1] + ")");
+        return query("select " + colum + " from `" + table + "` where (" + primary[0] + ") = (" + primary[1] + ")");
+    }
+
+    public static ResultSet getSqlList(String table, String primaryKey, String primaryValue, String colum, String sort) {
+        return getSqlList(table, new String[]{primaryKey}, new String[]{primaryValue}, colum, sort);
+    }
+
+    public static ResultSet getSqlList(String table, String[] primaryKey, String[] primaryValue, String colum, String sort) {
+        String[] primary = normalization(primaryKey, primaryValue);
+        return query("select " + colum + " from `" + table + "` where (" + primary[0] + ") = (" + primary[1] + ") ORDER BY " + sort);
+    }
+
+    public static ResultSet getSqlList(String table, String primaryKey, String primaryValue, String colum, String sort, int start, int limit) {
+        return getSqlList(table, new String[]{primaryKey}, new String[]{primaryValue}, colum, sort, start, limit);
+    }
+
+    public static ResultSet getSqlList(String table, String[] primaryKey, String[] primaryValue, String colum, String sort, int start, int limit) {
+        String[] primary = normalization(primaryKey, primaryValue);
+        return query("select " + colum + " from `" + table + "` where (" + primary[0] + ") = (" + primary[1] + ") ORDER BY " + sort + " Limit " + start + ", " + limit);
+    }
+
+    public static ResultSet getSqlList(String table, String colum) {
+        return query("select " + colum + " from `" + table + "`");
+    }
+
+    public static ResultSet getSqlList(String table, String colum, int start, int limit) {
+        return query("select " + colum + " from `" + table + "` limit " + start + ", " + limit);
+    }
+
+    public static ResultSet getSqlList(String table, String colum, String sort) {
+        return query("SELECT " + colum + " FROM `" + table + "` ORDER BY " + sort);
+    }
+
+    public static ResultSet getSqlList(String table, String colum, String sort, int start, int limit) {
+        return query("SELECT " + colum + " FROM `" + table + "` ORDER BY " + sort + " Limit " + start + ", " + limit);
+    }
+
+    public static int getCount(String table, String colum) {
+        for (RowData rowData : query("select count(" + colum + ") from `" + table + "`")) {
+            for (Object data : rowData) {
+                if (data != null) {
+                    return Integer.parseInt(data.toString());
+                }
+            }
+        }
+        return 0;
+    }
+
+    public static int getCount(String table, String primaryKey, String primaryValue, String colum) {
+        return getCount(table, new String[]{primaryKey}, new String[]{primaryValue}, colum);
+    }
+
+    public static int getCount(String table, String[] primaryKey, String[] primaryValue, String colum) {
+        String[] primary = normalization(primaryKey, primaryValue);
+        for (RowData rowData : query("select count(" + colum + ") from `" + table + "` where (" + primary[0] + ") = (" + primary[1] + ")")) {
+            for (Object data : rowData) {
+                if (data != null) {
+                    return Integer.parseInt(data.toString());
+                }
+            }
+        }
+        return 0;
+    }
+
+    public static int getMax(String table, String primaryKey, String primaryValue, String colum) {
+        return getMax(table, new String[]{primaryKey}, new String[]{primaryValue}, colum);
+    }
+
+    public static int getMax(String table, String[] primaryKey, String[] primaryValue, String colum) {
+        String[] primary = normalization(primaryKey, primaryValue);
+        for (RowData rowData : query("select max(" + colum + ") from `" + table + "` where (" + primary[0] + ") = (" + primary[1] + ")")) {
+            for (Object data : rowData) {
+                if (data != null) {
+                    return Integer.parseInt(data.toString());
+                }
+            }
+        }
+        return 0;
+    }
+
+    public static void setSql(String table, String colum, Object value) {
+        setSql(table, "ID", "0", colum, value);
     }
 
     public static void setSql(String table, String primaryKey, String primaryValue, String colum, Object value) {
@@ -101,17 +191,45 @@ public class SomSQL {
         } else if (value != null) {
             data = value.toString();
         }
-        update("insert into " + table + " (" + primary[0] + ", " + colum + ") values (" + primary[1] + ", " + data + ") on duplicate key update " + colum + " = " + data);
+        update("insert into `" + table + "` (" + primary[0] + ", " + colum + ") values (" + primary[1] + ", " + data + ") on duplicate key update " + colum + " = " + data);
+    }
+
+    public static void delete(String table) {
+        query("delete from `" + table + "`");
+    }
+
+    public static void delete(String table, String primaryKey, String primaryValue) {
+        delete(table, new String[]{primaryKey}, new String[]{primaryValue});
+    }
+
+    public static void delete(String table, String[] primaryKey, String[] primaryValue) {
+        String[] primary = normalization(primaryKey, primaryValue);
+        query("delete from `" + table + "` where (" + primary[0] + ") = (" + primary[1] + ")");
     }
 
     public static boolean existSql(String table, String primaryKey, String primaryValue) {
-        return existSql(table, new String[]{primaryKey}, new String[]{primaryValue});
+        return existSql(table, new String[]{primaryKey}, new String[]{primaryValue}, "*");
+    }
+
+
+    public static boolean existSql(String table, String primaryKey, String primaryValue, String colum) {
+        return existSql(table, new String[]{primaryKey}, new String[]{primaryValue}, colum);
     }
 
     public static boolean existSql(String table, String[] primaryKey, String[] primaryValue) {
-        String[] primary = normalization(primaryKey, primaryValue);
-        ResultSet result = query("select * from " + table + " where (" + primary[0] + ") = (" + primary[1] + ") limit 1");
-        return result.size() > 0;
+        return existSql(table, primaryKey, primaryValue, "*");
+    }
+
+    public static boolean existSql(String table, String[] primaryKey, String[] primaryValue, String colum) {
+        return getCount(table, primaryKey, primaryValue, colum) > 0;
+    }
+
+    public static boolean existSql(String table, String colum) {
+        return getCount(table, colum) > 0;
+    }
+
+    public static String getString(String table, String colum) {
+        return getSql(table, colum).getString(colum);
     }
 
     public static String getString(String table, String primaryKey, String primaryValue, String colum) {
@@ -133,27 +251,57 @@ public class SomSQL {
         return list;
     }
 
-    public static double getDouble(String table, String primaryKey, String primaryValue, String colum) {
+    public static List<String> getStringList(String table, String colum) {
+        List<String> list = new ArrayList<>();
+        for (RowData data : getSqlList(table, colum)) {
+            list.add(data.getString(colum));
+        }
+        return list;
+    }
+
+    public static Double getDouble(String table, String primaryKey, String primaryValue, String colum) {
         return getDouble(table, new String[]{primaryKey}, new String[]{primaryValue}, colum);
     }
 
-    public static double getDouble(String table, String[] primaryKey, String[] primaryValue, String colum) {
+    public static Double getDouble(String table, String[] primaryKey, String[] primaryValue, String colum) {
         return getSql(table, primaryKey, primaryValue, colum).getDouble(colum);
     }
 
-    public static int getInt(String table, String primaryKey, String primaryValue, String colum) {
+    public static Integer getInt(String table, String colum) {
+        return getSql(table, colum).getInt(colum);
+    }
+
+    public static Integer getInt(String table, String primaryKey, String primaryValue, String colum) {
         return getInt(table, new String[]{primaryKey}, new String[]{primaryValue}, colum);
     }
 
-    public static int getInt(String table, String[] primaryKey, String[] primaryValue, String colum) {
+    public static Integer getInt(String table, String[] primaryKey, String[] primaryValue, String colum) {
         return getSql(table, primaryKey, primaryValue, colum).getInt(colum);
     }
 
-    public static long getLong(String table, String primaryKey, String primaryValue, String colum) {
+    public static Long getLong(String table, String primaryKey, String primaryValue, String colum) {
         return getLong(table, new String[]{primaryKey}, new String[]{primaryValue}, colum);
     }
 
-    public static long getLong(String table, String[] primaryKey, String[] primaryValue, String colum) {
+    public static Long getLong(String table, String[] primaryKey, String[] primaryValue, String colum) {
         return getSql(table, primaryKey, primaryValue, colum).getLong(colum);
+    }
+
+    public static void addNumber(String table, String primaryKey, String primaryValue, String colum, int number) {
+        addNumber(table, new String[]{primaryKey}, new String[]{primaryValue}, colum, number);
+    }
+
+    public static void addNumber(String table, String[] primaryKey, String[] primaryValue, String colum, int number) {
+        String[] primary = normalization(primaryKey, primaryValue);
+        update("update `" + table + "` set " + colum + " = " + colum + " + " + number + " where (" + primary[0] + ") = (" + primary[1] + ")");
+    }
+
+    public static void removeNumber(String table, String primaryKey, String primaryValue, String colum, int number) {
+        removeNumber(table, new String[]{primaryKey}, new String[]{primaryValue}, colum, number);
+    }
+
+    public static void removeNumber(String table, String[] primaryKey, String[] primaryValue, String colum, int number) {
+        String[] primary = normalization(primaryKey, primaryValue);
+        update("update `" + table + "` set " + colum + " = " + colum + " - " + number + " where (" + primary[0] + ") = (" + primary[1] + ")");
     }
 }

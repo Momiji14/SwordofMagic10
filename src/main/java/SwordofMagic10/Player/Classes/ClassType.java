@@ -40,7 +40,6 @@ public enum ClassType {
         this.equipAble.add(EquipmentCategory.Boots);
         this.equipAble.add(EquipmentCategory.Shield);
         this.equipAble.add(EquipmentCategory.Trinket);
-        this.equipAble.add(EquipmentCategory.Amulet);
         this.normalSkill = normalSkill;
         defaultGroupID = defaultGroup;
         this.lore = loreText(List.of(lore.split("\n")));

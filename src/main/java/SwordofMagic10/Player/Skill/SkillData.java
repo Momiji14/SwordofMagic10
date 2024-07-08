@@ -83,7 +83,7 @@ public class SkillData implements SomStatus {
     }
 
     public double getManaCost(int level) {
-        return manaCost * (1+(level*0.01));
+        return manaCost * (1 + (level * 0.07));
     }
 
     public void setManaCost(double manaCost) {
@@ -136,10 +136,6 @@ public class SkillData implements SomStatus {
 
     public double getHeal() {
         return getParameter(SkillParameterType.Heal);
-    }
-
-    public double getDamageResist() {
-        return getParameter(SkillParameterType.DamageResist);
     }
 
     public double getPercent() {
